@@ -1,0 +1,5 @@
+export enum UpdatesEnum {
+  PASSWORD = 'PASSWORD',
+  INFORMATION = 'INFORMATION',
+  PERMISSION = 'PERMISSION',
+}
