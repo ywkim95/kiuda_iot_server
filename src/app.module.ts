@@ -3,8 +3,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { CommonModule } from './common/common.module';
-import { SensorsModule } from './gateways/sensors/sensors.module';
-import { ControllersModule } from './gateways/controllers/controllers.module';
+import { SensorsModule } from './devices/sensors/sensors.module';
+import { ControllersModule } from './devices/controllers/controllers.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -25,6 +25,13 @@ import { GatewaysModule } from './gateways/gateways.module';
 import { GatewaysModel } from './gateways/entities/gateway.entity';
 import { GatewaysGeneralLogModel } from './gateways/entities/gateway-general-log.entity';
 import { GatewaysConfigLogModel } from './gateways/entities/gateway-config-log.entity';
+import { SensorSpecificationsModel } from './devices/sensors/specifications/entities/specifications-sensor.entity';
+import { DeviceSensorsModel } from './devices/sensors/device/entities/device-sensor.entity';
+import { DevicesModule } from './devices/devices.module';
+import { DevicesModel } from './devices/entities/device.entity';
+import { DeviceControllersModel } from './devices/controllers/entities/device-controller.entity';
+import { RealTimeControllersModel } from './devices/sensors/real-time/entities/real-time-controller.entity';
+import { RealTimeSensorsModel } from './devices/sensors/real-time/entities/real-time-sensor.entity';
 
 @Module({
   imports: [
@@ -52,10 +59,17 @@ import { GatewaysConfigLogModel } from './gateways/entities/gateway-config-log.e
         GatewaysModel,
         GatewaysGeneralLogModel,
         GatewaysConfigLogModel,
+        SensorSpecificationsModel,
+        RealTimeControllersModel,
+        RealTimeSensorsModel,
+        DeviceControllersModel,
+        DeviceSensorsModel,
+        DevicesModel,
       ],
       synchronize: true,
     }),
     GatewaysModule,
+    DevicesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -93,6 +93,6 @@ export class UsersModel extends BaseWithUpdateModel {
   @OneToMany(() => UsersLogModel, (log) => log.user)
   logs: UsersLogModel[];
 
-  @OneToMany(() => GatewaysModel, (gateway) => gateway.onwer)
+  @OneToMany(() => GatewaysModel, (gateway) => gateway.owner)
   gateways: GatewaysModel[];
 }

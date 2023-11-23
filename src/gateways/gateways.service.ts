@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GatewaysModel } from './entities/gateway.entity';
 import { Repository } from 'typeorm';
 import { GatewaysPaginationDto } from './dto/paginate-gateway.dto';
 import { CommonService } from 'src/common/common.service';
 import { UsersModel } from 'src/users/entity/users.entity';
-
+import { CreateGatewayDto } from './dto/create-gateway.dto';
+import { UpdateGatewayDto } from './dto/update-gateway.dto';
+import { isEqual } from 'lodash';
 @Injectable()
 export class GatewaysService {
   constructor(
@@ -27,15 +29,67 @@ export class GatewaysService {
       this.gatewaysRepository,
       {
         relations: {
-          onwer: true,
+          owner: true,
         },
       },
       'gateways',
     );
   }
 
+  async getGatewayById(id: number) {
+    const gateway = await this.gatewaysRepository.findOne({
+      where: {
+        id,
+      },
+    });
+    if (!gateway) {
+      throw new NotFoundException();
+    }
+    return gateway;
+  }
+
+  async createGateway(dto: CreateGatewayDto, user: UsersModel) {
+    const gateway = this.gatewaysRepository.create({
+      ...dto,
+      createdBy: user.email,
+      updatedBy: user.email,
+    });
+
+    const newGateway = await this.gatewaysRepository.save(gateway);
+
+    return newGateway;
+  }
+
+  async updateGatewayById(id: number, dto: UpdateGatewayDto, user: UsersModel) {
+    const gateway = await this.getGatewayById(id);
+
+    const comparisonData = { ...gateway, ...dto };
+
+    if (isEqual(gateway, comparisonData)) {
+      return gateway;
+    }
+
+    const newGateway = {
+      ...comparisonData,
+      updatedAt: new Date(),
+      updatedBy: user.email,
+    };
+
+    return await this.gatewaysRepository.save(newGateway);
+  }
+
+  async deleteGatewayById(id: number) {
+    await this.getGatewayById(id);
+
+    return await this.gatewaysRepository.delete(id);
+  }
+
+  async createRealTime(dto: string[]) {
+    const realTime = await this.gatewaysRepository.save({});
+  }
+
   async generateGateways(user: UsersModel) {
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
       await this.gatewaysRepository.save({
         onwer: user,
         createdBy: user.email,

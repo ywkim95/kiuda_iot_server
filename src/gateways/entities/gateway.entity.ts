@@ -2,8 +2,15 @@ import { Exclude } from 'class-transformer';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
 import { UsersModel } from 'src/users/entity/users.entity';
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne } from 'typeorm';
-import { IsRegionId } from '../decorator/is-region-id.decorator';
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
+import { DevicesModel } from 'src/devices/entities/device.entity';
 
 function formatStringAsThreeDigit(value: string): string {
   return value.padStart(3, '0');
@@ -12,7 +19,7 @@ function formatStringAsThreeDigit(value: string): string {
 @Entity()
 export class GatewaysModel extends BaseWithUpdateModel {
   @ManyToOne(() => UsersModel, (user) => user.gateways)
-  onwer: UsersModel;
+  owner: UsersModel;
   // where__onwer_email__i_like
   // where / onwer_email / i_like
   // onwer_email -> onwer: { email: }
@@ -95,6 +102,9 @@ export class GatewaysModel extends BaseWithUpdateModel {
   })
   @IsBoolean()
   useYn: boolean;
+
+  @OneToMany(() => DevicesModel, (device) => device.gateway)
+  devices: DevicesModel[];
 
   @BeforeInsert()
   @BeforeUpdate()

@@ -1,7 +1,9 @@
-import { BaseModel } from 'src/common/entity/base.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { UsersModel } from './users.entity';
 import { UpdatesEnum } from '../const/updates.const';
+import { IsString } from 'class-validator';
+import { BaseModel } from 'src/common/entity/base.entity';
+import { stringValidationMessage } from 'src/common/validation-message/string-validation.message';
 
 @Entity()
 export class UsersLogModel extends BaseModel {
@@ -9,9 +11,15 @@ export class UsersLogModel extends BaseModel {
   user: UsersModel;
 
   @Column({ comment: '변경한 사용자 IP' })
+  @IsString({
+    message: stringValidationMessage,
+  })
   ip: string;
 
   @Column({ comment: '변경한 사용자 기기정보' })
+  @IsString({
+    message: stringValidationMessage,
+  })
   device: string;
 
   @Column({

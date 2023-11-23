@@ -53,11 +53,7 @@ export class UsersService {
     if (emailExists) throw new BadRequestException('이미 가입한 이메일입니다!');
 
     const userObject = this.usersRepository.create({
-      email: user.email,
-      password: user.password,
-      name: user.name,
-      address: user.address,
-      phoneNumber: user.phoneNumber,
+      ...user,
       updatedBy: user.email,
       createdBy: user.email,
       lastLoginIp: ip,
@@ -87,7 +83,12 @@ export class UsersService {
    * 5. 새로운 값을 계정정보에 저장한 뒤 true를 반환한다.
    */
 
-  async updateUser(userId: number, dto: AbstractDto, qr?: QueryRunner) {
+  async updateUser(
+    userId: number,
+    dto: AbstractDto,
+    nowUser: UsersModel,
+    qr?: QueryRunner,
+  ) {
     const usersRepository = this.getUsersRepository(qr);
 
     const oldUser = await usersRepository.findOne({
@@ -109,6 +110,9 @@ export class UsersService {
     } else if (dto instanceof UpdateUserPermissionDto) {
       user = await this.UpdateUserPermission(oldUser, dto);
     }
+
+    user.updatedAt = new Date();
+    user.updatedBy = nowUser.email;
 
     const newUser = await usersRepository.save(user);
 

@@ -10,8 +10,10 @@ export class CreateGatewayDto extends PickType(GatewaysModel, [
   'ssidPassword',
   'frequency',
   'txPower',
+  'rfConfig',
   'controlScript',
+  'location',
   'description',
   'useYn',
-  'onwer',
+  'owner',
 ]) {}

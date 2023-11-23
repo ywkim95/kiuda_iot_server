@@ -44,9 +44,10 @@ export class UsersController {
     @Req() request: Request,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() body: UpdateUserInformationDto,
+    @User() user: UsersModel,
     @QueryRunner() qr: QR,
   ) {
-    const resp = await this.usersService.updateUser(userId, body, qr);
+    const resp = await this.usersService.updateUser(userId, body, user, qr);
     const headers = request.headers['user-agent'];
     const agent = useragent.parse(headers);
     const ip = this.usersService.findIp(request);
@@ -67,9 +68,10 @@ export class UsersController {
     @Req() request: Request,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() body: UpdateUserPasswordDto,
+    @User() user: UsersModel,
     @QueryRunner() qr: QR,
   ) {
-    const resp = await this.usersService.updateUser(userId, body, qr);
+    const resp = await this.usersService.updateUser(userId, body, user, qr);
 
     const headers = request.headers['user-agent'];
     const agent = useragent.parse(headers);
@@ -90,9 +92,10 @@ export class UsersController {
     @Req() request: Request,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() body: UpdateUserPermissionDto,
+    @User() user: UsersModel,
     @QueryRunner() qr: QR,
   ) {
-    const resp = await this.usersService.updateUser(userId, body, qr);
+    const resp = await this.usersService.updateUser(userId, body, user, qr);
     const headers = request.headers['user-agent'];
     const agent = useragent.parse(headers);
     const ip = this.usersService.findIp(request);
