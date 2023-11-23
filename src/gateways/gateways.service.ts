@@ -84,8 +84,26 @@ export class GatewaysService {
     return await this.gatewaysRepository.delete(id);
   }
 
-  async createRealTime(dto: string[]) {
-    const realTime = await this.gatewaysRepository.save({});
+  async gatewayReset(id: number) {
+    const gateway = await this.getGatewayById(id);
+    /**
+     * 게이트웨이를 향해 명령어 전달
+     */
+
+    return true;
+  }
+
+  async setGatewayUseYn(id: number, useYn: boolean, user: UsersModel) {
+    const gateway = await this.getGatewayById(id);
+
+    gateway.useYn = useYn;
+
+    gateway.updatedAt = new Date();
+    gateway.updatedBy = user.email;
+
+    await this.gatewaysRepository.save(gateway);
+
+    return true;
   }
 
   async generateGateways(user: UsersModel) {

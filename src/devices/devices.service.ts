@@ -9,6 +9,7 @@ import { CommonService } from 'src/common/common.service';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { GatewaysService } from 'src/gateways/gateways.service';
 import { isEqual } from 'lodash';
+import { DeviceEnum } from './const/deviceEnum.const';
 
 @Injectable()
 export class DevicesService {
@@ -110,5 +111,23 @@ export class DevicesService {
         },
       },
     });
+  }
+
+  async findDeviceListforSensors(gatewayId: number) {
+    const deviceList = await this.deviceRepository.find({
+      where: {
+        gateway: {
+          id: gatewayId,
+        },
+        classify: DeviceEnum.SENSOR,
+      },
+      relations: {
+        sensors: true,
+      },
+    });
+    if (!deviceList) {
+      throw new NotFoundException();
+    }
+    return deviceList;
   }
 }

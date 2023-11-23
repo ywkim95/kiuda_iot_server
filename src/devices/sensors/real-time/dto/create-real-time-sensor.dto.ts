@@ -1,5 +1,5 @@
 import { PickType } from '@nestjs/mapped-types';
-import { RealTimeSensorsModel } from '../entities/real-time-sensor.entity';
+import { RealTimeSensorsModel } from '../entities/real-time/real-time-sensor.entity';
 import { IsString } from 'class-validator';
 
 export class CreateRealTimeSensorsDto extends PickType(RealTimeSensorsModel, [

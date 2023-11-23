@@ -1,16 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateRealTimeSensorsDto } from './dto/create-real-time-sensor.dto';
 // import { RealTimeGateway } from './real-time.gateway';
-import { RealTimeSensorsModel } from './entities/real-time-sensor.entity';
-import { RealTimeControllersModel } from './entities/real-time-controller.entity';
+import { RealTimeSensorsModel } from './entities/real-time/real-time-sensor.entity';
+import { RealTimeControllersModel } from './entities/real-time/real-time-controller.entity';
 import { CreateRealTimeControllersDto } from './dto/create-real-time-contrller.dto';
 import { DeviceSensorsModel } from '../device/entities/device-sensor.entity';
 import { DeviceControllersModel } from 'src/devices/controllers/entities/device-controller.entity';
 import { splitString } from './const/splitString.const';
 import { DeviceEnum } from 'src/devices/const/deviceEnum.const';
 import { DevicesService } from 'src/devices/devices.service';
+import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
+import { UsersModel } from 'src/users/entity/users.entity';
+import { isEqual } from 'lodash';
+import { DevicesModel } from 'src/devices/entities/device.entity';
+import { TimeUnitEnum } from './const/time-unit.enum';
 
 @Injectable()
 export class RealTimeService {
@@ -44,7 +49,7 @@ export class RealTimeService {
      * 검증이나 변환 과정인데 결국에는
      * saveData로 던진다.
      */
-    let data;
+    let data: RealTimeSensorsModel | RealTimeControllersModel;
     if (isSensor) {
       data = await this.saveSensorData(dto);
     } else {
@@ -167,10 +172,94 @@ export class RealTimeService {
       },
     });
   }
-
-  // 데이터 보내기
-  // private async sendData(dataList: Map<string, object>[], roomId: string) {
-  //   this.realtimeGateway.server.to(roomId).emit('receive_data', dataList);
-  // }
   //-------------------------------------------------------------------------
+
+  async getTableAndGraph(deviceId: number, unit: TimeUnitEnum) {
+    /**
+     * 이건 누적 테이블을 만들어서 데이터를 보내줘야겠다.
+     *
+     * 계산 방식은 일(day) 기준으로 한다.
+     */
+
+    switch (unit) {
+      case TimeUnitEnum.MINUTE:
+        return;
+      case TimeUnitEnum.DAILY:
+        return;
+      case TimeUnitEnum.MONTHLY:
+        return;
+    }
+  }
+
+  async getAlarmRangeAndCalibrateById(gatewayId: number) {
+    const deviceList =
+      await this.devicesService.findDeviceListforSensors(gatewayId);
+
+    return deviceList;
+  }
+
+  async updateAlarmRangeAndCalibrate(
+    dtoList: UpdateAlarmRangeAndCalibrateDto[],
+    user: UsersModel,
+  ) {
+    // currentSensorIdList
+    // number[]
+    const sensorIds = dtoList.flatMap((dto) =>
+      dto.sensors.map((sensor) => sensor.id),
+    );
+    // Map<id, model>
+    const sensorsMap = await this.fetchSensorsMap(sensorIds);
+
+    // void[]
+    const updatePromises = dtoList.flatMap((dto) =>
+      dto.sensors
+        .filter((sensor) => this.isSensorUpdated(sensorsMap, sensor))
+        .map((sensor) =>
+          this.updateSensor(sensorsMap[sensor.id], sensor, user.email),
+        ),
+    );
+
+    await Promise.all(updatePromises);
+
+    return true;
+  }
+
+  async fetchSensorsMap(sensorIds: number[]) {
+    const sensors = await this.deviceSensorsRepository.find({
+      where: {
+        id: In(sensorIds),
+      },
+    });
+
+    return new Map(sensors.map((sensor) => [sensor.id, sensor]));
+  }
+
+  isSensorUpdated(
+    sensorsMap: Map<number, DeviceSensorsModel>,
+    sensorDto: DeviceSensorsModel,
+  ) {
+    const currentSensor: DeviceSensorsModel = sensorsMap[sensorDto.id];
+    const isCorrectionValueUpdated =
+      currentSensor.correctionValue !== sensorDto.correctionValue;
+    const isCustomStableStart =
+      currentSensor.customStableStart !== sensorDto.customStableStart;
+    const isCustomStableEnd =
+      currentSensor.customStableEnd !== sensorDto.customStableEnd;
+
+    return isCorrectionValueUpdated || isCustomStableStart || isCustomStableEnd;
+  }
+
+  async updateSensor(
+    currentSensor: DeviceSensorsModel,
+    newSensorData: DeviceSensorsModel,
+    updatedBy: string,
+  ) {
+    const updatedSensor = {
+      ...currentSensor,
+      ...newSensorData,
+      updatedBy,
+      updatedAt: new Date(),
+    };
+    await this.deviceSensorsRepository.save(updatedSensor);
+  }
 }

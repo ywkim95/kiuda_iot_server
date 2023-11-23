@@ -67,13 +67,18 @@ export class GatewaysController {
 
   // 게이트웨이 단위 리셋
   @Get(':gatewayId/reset')
-  getReset(@Param('gatewayId', ParseIntPipe) gatewayId: number) {}
+  async getReset(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
+    return this.gatewaysService.gatewayReset(gatewayId);
+  }
 
   // 사용유무 변경
   @Post(':gatewayId/useYn')
   postUseYn(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
-    @Body() body: string[],
-  ) {}
+    @Body() body: { useYn: boolean },
+    @User() user: UsersModel,
+  ) {
+    return this.gatewaysService.setGatewayUseYn(gatewayId, body.useYn, user);
+  }
   // -----------------------------------------------------------
 }

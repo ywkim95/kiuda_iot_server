@@ -133,6 +133,20 @@ export class RealTimeGateway
   //   this.server.in(message.gatewayId).emit('receive_message', message.message);
   // }
 
+  @SubscribeMessage('pauseSendingData')
+  handlePauseSendingData(@ConnectedSocket() socket: Socket) {
+    this.stopSendingData(socket);
+  }
+
+  @SubscribeMessage('resumeSendingData')
+  handleResumeSendingData(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { roomId: string },
+  ) {
+    const { roomId } = data;
+    this.startSendingData(roomId, socket);
+  }
+
   // 데이터 전송 시작
   private startSendingData(roomId: string, socket: Socket) {
     const interval = setInterval(async () => {

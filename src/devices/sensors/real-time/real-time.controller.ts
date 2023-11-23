@@ -1,7 +1,22 @@
-import { Controller, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  ParseEnumPipe,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { RealTimeService } from './real-time.service';
 import { IsPublic } from 'src/common/decorator/is-public.decorator';
 import { LoRaEnum } from 'src/lora/const/lora-enum.const';
+import { User } from 'src/users/decorator/user.decorator';
+import { UsersModel } from 'src/users/entity/users.entity';
+import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
+import { TimeUnitEnum } from './const/time-unit.enum';
 
 @Controller()
 export class RealTimeController {
@@ -50,9 +65,35 @@ export class RealTimeController {
     }
   }
 
-  // @Get(':dataId')
-  // getRealTimeData(@Param('dataId') dataId: number) {}
+  // 누적 데이터
+  @Get('tableAndGraph/:deviceId/:timeUnit')
+  async getTableAndGraph(
+    @Param('deviceId', ParseIntPipe) deviceId: number,
+    @Param(
+      'timeUnit',
+      new ParseEnumPipe(TimeUnitEnum, {
+        errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      }),
+    )
+    timeUnit: TimeUnitEnum,
+  ) {
+    return await this.realtimeService.getTableAndGraph(deviceId, timeUnit);
+  }
 
-  // @Patch(':dataId')
-  // patchRealTimeData(@Param('dataId') dataId: number, @Body() body: any) {}
+  // 알람범위&보정 요청
+  @Get('alarmRangeAndCalibrate/:gatewayId')
+  async getAlarmRangeAndCalibrate(
+    @Param('gatewayId', ParseIntPipe) gatewayId: number,
+  ) {
+    return await this.realtimeService.getAlarmRangeAndCalibrateById(gatewayId);
+  }
+
+  // 알람범위&보정 수정
+  @Patch('alarmRangeAndCalibrate')
+  async postAlarmRangeAndCalibrate(
+    @Body() body: UpdateAlarmRangeAndCalibrateDto[],
+    @User() user: UsersModel,
+  ) {
+    return await this.realtimeService.updateAlarmRangeAndCalibrate(body, user);
+  }
 }

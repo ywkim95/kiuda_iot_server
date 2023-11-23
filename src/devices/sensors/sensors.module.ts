@@ -7,8 +7,8 @@ import { SensorSpecificationsModel } from './specifications/entities/specificati
 import { DeviceSensorsModel } from './device/entities/device-sensor.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
-import { RealTimeControllersModel } from './real-time/entities/real-time-controller.entity';
-import { RealTimeSensorsModel } from './real-time/entities/real-time-sensor.entity';
+import { RealTimeControllersModel } from './real-time/entities/real-time/real-time-controller.entity';
+import { RealTimeSensorsModel } from './real-time/entities/real-time/real-time-sensor.entity';
 import { RealTimeService } from './real-time/real-time.service';
 import { RealTimeGateway } from './real-time/real-time.gateway';
 import { GatewaysModule } from 'src/gateways/gateways.module';
@@ -19,6 +19,10 @@ import { SpecificationsService } from './specifications/specifications-sensor.se
 import { DeviceSensorsService } from './device/device-sensor.service';
 import { SpecificationsSensorController } from './specifications/specifications-sensor.controller';
 import { DeviceSensorsController } from './device/device-sensor.controller';
+import { AccumulatedIrradianceModel } from './real-time/entities/accumulate/accumulated-irradiance.entity';
+import { DailyAverageModel } from './real-time/entities/average/daily-average.entity';
+import { FiveMinutesAverageModel } from './real-time/entities/average/five-minutes-average.entity';
+import { MonthlyAverageModel } from './real-time/entities/average/monthly-average.entity';
 
 @Module({
   imports: [
@@ -28,6 +32,10 @@ import { DeviceSensorsController } from './device/device-sensor.controller';
       DeviceControllersModel,
       RealTimeControllersModel,
       RealTimeSensorsModel,
+      AccumulatedIrradianceModel,
+      DailyAverageModel,
+      FiveMinutesAverageModel,
+      MonthlyAverageModel,
     ]),
     CommonModule,
     AuthModule,

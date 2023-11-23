@@ -8,8 +8,8 @@ import { UsersModel } from 'src/users/entity/users.entity';
 import { DeviceSensorsPaginationDto } from './device/dto/paginate-device-sensor.dto';
 import { CreateDeviceSensorDto } from './device/dto/create-device-sensor.dto';
 import { UpdateDeviceSensorDto } from './device/dto/update-device-sensor.dto';
-import { RealTimeSensorsModel } from './real-time/entities/real-time-sensor.entity';
-import { RealTimeControllersModel } from './real-time/entities/real-time-controller.entity';
+import { RealTimeSensorsModel } from './real-time/entities/real-time/real-time-sensor.entity';
+import { RealTimeControllersModel } from './real-time/entities/real-time/real-time-controller.entity';
 import { DevicesService } from '../devices.service';
 import { SpecificationsService } from './specifications/specifications-sensor.service';
 
