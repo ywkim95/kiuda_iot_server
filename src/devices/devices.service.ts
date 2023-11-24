@@ -101,6 +101,8 @@ export class DevicesService {
     return await this.deviceRepository.delete(id);
   }
 
+  // ------------------------------------------------------------------
+
   async findDeviceList(countryId: string, areaId: string, gatewayId: string) {
     return await this.deviceRepository.find({
       where: {
@@ -129,5 +131,16 @@ export class DevicesService {
       throw new NotFoundException();
     }
     return deviceList;
+  }
+  // ------------------------------------------------------------------
+
+  async getAllDeviceSensorIds() {
+    const ids = await this.deviceRepository
+      .createQueryBuilder('device')
+      .select('device.id')
+      .where('device.classify = :classify', { classify: DeviceEnum.SENSOR })
+      .getMany();
+
+    return ids.map((device) => device.id);
   }
 }

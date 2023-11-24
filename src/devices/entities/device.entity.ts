@@ -9,9 +9,9 @@ import {
 import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
 import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { DeviceSensorsModel } from '../sensors/device/entities/device-sensor.entity';
-import { DeviceControllersModel } from '../controllers/entities/device-controller.entity';
+import { SensorDeviceModel } from '../../sensors/device/entities/device-sensor.entity';
 import { DeviceEnum } from '../const/deviceEnum.const';
+import { ContDeviceModel } from '../../controllers/device/entities/devices-controller.entity';
 
 @Entity()
 export class DevicesModel extends BaseWithUpdateModel {
@@ -68,9 +68,9 @@ export class DevicesModel extends BaseWithUpdateModel {
   @ManyToOne(() => GatewaysModel, (gateway) => gateway.devices)
   gateway: GatewaysModel;
 
-  @OneToMany(() => DeviceSensorsModel, (sensors) => sensors.device)
-  sensors: DeviceSensorsModel[];
+  @OneToMany(() => SensorDeviceModel, (sensors) => sensors.device)
+  sensors: SensorDeviceModel[];
 
-  @OneToMany(() => DeviceControllersModel, (controllers) => controllers.device)
-  controllers: DeviceControllersModel[];
+  @OneToMany(() => ContDeviceModel, (controllers) => controllers.device)
+  controllers: ContDeviceModel[];
 }
