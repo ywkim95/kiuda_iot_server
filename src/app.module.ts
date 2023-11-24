@@ -43,6 +43,7 @@ import { ContMapModule } from './controllers/mappings/mappings-controller.module
 import { RealTimeDataModule } from './real-time-data/real-time-data.module';
 import { SensorSpecModule } from './sensors/specifications/specifications-sensor.module';
 import { SensorDeviceModule } from './sensors/device/device-sensor.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { SensorDeviceModule } from './sensors/device/device-sensor.module';
     }),
     GatewaysModule,
     DevicesModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
