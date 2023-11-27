@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CommonService } from 'src/common/common.service';
+import { CommonService } from '../../common/common.service';
 import { ContDevicePaginateDto } from './dto/paginate-devices-controller.dto';
 import { CreateContDeviceDto } from './dto/create-devices-controller.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import { UpdateContDeviceDto } from './dto/update-devices-controller.dto';
 import { isEqual } from 'lodash';
 import { ContDeviceModel } from './entities/devices-controller.entity';
@@ -112,5 +112,22 @@ export class ContDeviceService {
     await this.getDeviceControllerById(id);
 
     return await this.deviceControllersRepository.delete(id);
+  }
+
+  async getContWithDevice(id: number) {
+    const controller = await this.deviceControllersRepository.findOne({
+      where: {
+        id,
+      },
+      relations: {
+        device: true,
+      },
+    });
+
+    if (!controller) {
+      throw new NotFoundException();
+    }
+
+    return controller;
   }
 }

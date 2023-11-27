@@ -1,4 +1,4 @@
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ContSpecModel } from './specifications-controller.entity';
 import { IsBoolean, IsNumber, IsString } from 'class-validator';

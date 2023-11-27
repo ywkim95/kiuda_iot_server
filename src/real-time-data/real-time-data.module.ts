@@ -17,6 +17,8 @@ import { ContDeviceModule } from 'src/controllers/device/device-controller.modul
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { GatewaysModule } from 'src/gateways/gateways.module';
+import { RealTimeDataSaveService } from './real-time-data-save.service';
+import { ContMapModule } from 'src/controllers/mappings/mappings-controller.module';
 
 @Module({
   imports: [
@@ -36,9 +38,14 @@ import { GatewaysModule } from 'src/gateways/gateways.module';
     AuthModule,
     UsersModule,
     GatewaysModule,
+    ContMapModule,
   ],
-  exports: [RealTimeDataService, RealTimeDataGateway],
+  exports: [RealTimeDataService, RealTimeDataSaveService, RealTimeDataGateway],
   controllers: [RealTimeDataController],
-  providers: [RealTimeDataService, RealTimeDataGateway],
+  providers: [
+    RealTimeDataService,
+    RealTimeDataSaveService,
+    RealTimeDataGateway,
+  ],
 })
 export class RealTimeDataModule {}

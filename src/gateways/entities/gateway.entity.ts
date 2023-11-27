@@ -1,7 +1,6 @@
-import { Exclude } from 'class-transformer';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { BaseWithUpdateModel } from '../../common/entity/base-with-update.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -10,7 +9,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { DevicesModel } from 'src/devices/entities/device.entity';
+import { DevicesModel } from '../../devices/entities/device.entity';
 
 function formatStringAsThreeDigit(value: string): string {
   return value.padStart(3, '0');

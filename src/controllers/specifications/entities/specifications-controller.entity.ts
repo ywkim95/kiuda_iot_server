@@ -1,4 +1,4 @@
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import { ContTypeEnum } from '../const/controller-type.enum';
 import {

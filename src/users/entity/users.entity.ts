@@ -1,16 +1,16 @@
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
+import { BaseWithUpdateModel } from '../../common/entity/base-with-update.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import { RolesEnum } from '../const/roles.const';
 import { PermissionsEnum } from '../const/permission.const';
 import { IsEmail, IsString, Length } from 'class-validator';
-import { emailValidationMessage } from 'src/common/validation-message/email-validation.message';
-import { stringValidationMessage } from 'src/common/validation-message/string-validation.message';
-import { IsCustomPhoneNumber } from 'src/common/decorator/is-custom-phone-number.decorator';
+import { emailValidationMessage } from '../../common/validation-message/email-validation.message';
+import { stringValidationMessage } from '../../common/validation-message/string-validation.message';
+import { IsCustomPhoneNumber } from '../../common/decorator/is-custom-phone-number.decorator';
 import { UsersLogModel } from './users-log.entity';
 import { Exclude } from 'class-transformer';
-import { lengthValidationMessage } from 'src/common/validation-message/length-validation.message';
+import { lengthValidationMessage } from '../../common/validation-message/length-validation.message';
 import { IsPassword } from '../decorator/is-password.decorator';
-import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
+import { GatewaysModel } from '../../gateways/entities/gateway.entity';
 
 /**
  * id

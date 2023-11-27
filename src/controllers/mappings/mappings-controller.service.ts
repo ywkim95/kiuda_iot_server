@@ -2,10 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ContMapModel } from './entities/mappings-controller.entity';
 import { Repository } from 'typeorm';
-import { CommonService } from 'src/common/common.service';
+import { CommonService } from '../../common/common.service';
 import { ContMapPaginateDto } from './dto/paginate-mappings-controller.dto';
 import { CreateContMapDto } from './dto/create-mappings-controller.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import { UpdateContMapDto } from './dto/update-mappings-controller.dto';
 import { isEqual } from 'lodash';
 
@@ -84,5 +84,29 @@ export class ContMapService {
     await this.getMappingControllerById(id);
 
     return await this.mappingRepository.delete(id);
+  }
+
+  // 매핑리스트 반환로직
+  async getMappingListByContId(contId: number) {
+    const list = await this.mappingRepository.find({
+      where: {
+        deviceController: {
+          id: contId,
+        },
+      },
+    });
+
+    if (list.length === 0) {
+      throw new NotFoundException();
+    }
+
+    return list;
+  }
+
+  // 매핑리스트 저장로직
+  async saveMappingList(list: ContMapModel[]) {
+    return await Promise.all(
+      list.map((value) => this.mappingRepository.save(value)),
+    );
   }
 }

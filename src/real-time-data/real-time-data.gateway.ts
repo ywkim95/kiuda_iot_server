@@ -14,7 +14,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { SocketCatchHttpExceptionFilter } from 'src/common/exception-filter/socket-catch-http.exception-filter';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { UsersService } from 'src/users/users.service';
-import { GatewaysService } from '../gateways/gateways.service';
 import { RealTimeDataService } from './real-time-data.service';
 
 @WebSocketGateway({
@@ -27,7 +26,6 @@ export class RealTimeDataGateway
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
     private readonly realtimeService: RealTimeDataService,
-    private readonly gatewaysService: GatewaysService,
   ) {}
 
   @WebSocketServer()

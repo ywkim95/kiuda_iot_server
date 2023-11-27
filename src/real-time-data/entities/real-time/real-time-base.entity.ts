@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { DevicesModel } from 'src/devices/entities/device.entity';
+import { DevicesModel } from '../../../devices/entities/device.entity';
 // 이걸로 가도될듯?
 export abstract class RealTimeDataBaseModel {
   @PrimaryGeneratedColumn({ comment: '아이디' })

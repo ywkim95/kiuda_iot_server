@@ -5,9 +5,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DevicesModel } from './entities/device.entity';
 import { Repository } from 'typeorm';
 import { DevicePaginationDto } from './dto/paginate-device.dto';
-import { CommonService } from 'src/common/common.service';
-import { UsersModel } from 'src/users/entity/users.entity';
-import { GatewaysService } from 'src/gateways/gateways.service';
+import { CommonService } from '../common/common.service';
+import { UsersModel } from '../users/entity/users.entity';
+import { GatewaysService } from '../gateways/gateways.service';
 import { isEqual } from 'lodash';
 import { DeviceEnum } from './const/deviceEnum.const';
 

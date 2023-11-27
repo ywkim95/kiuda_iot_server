@@ -1,9 +1,8 @@
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IsNumber, IsString } from 'class-validator';
-import { DevicesModel } from 'src/devices/entities/device.entity';
+import { DevicesModel } from '../../../devices/entities/device.entity';
 import { SensorSpecModel } from '../../specifications/entities/specifications-sensor.entity';
-import { ContMapModel } from 'src/controllers/mappings/entities/mappings-controller.entity';
 /**
  * 1. 센서
  *  1) 제원
@@ -44,8 +43,8 @@ export class SensorDeviceModel extends BaseWithUpdateModel {
   @IsNumber()
   customStableEnd: number;
 
-  @OneToMany(() => ContMapModel, (mapping) => mapping.deviceSensor)
-  mappings: ContMapModel[];
+  // @OneToMany(() => ContMapModel, (mapping) => mapping.deviceSensor)
+  // mappings: ContMapModel[];
   // 실시간데이터도 추가해야되는데 굳이...? 실시간데이터쪽에 ManyToOne만 해줘도될듯
 }
 /**

@@ -8,6 +8,6 @@ export class CreateContMapDto extends PickType(ContMapModel, [
   'gab',
   'useYn',
   'controllerValue',
-  'deviceSensor',
+  // 'deviceSensor',
   'deviceController',
 ]) {}

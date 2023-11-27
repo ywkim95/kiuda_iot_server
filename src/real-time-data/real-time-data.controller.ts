@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,16 +12,21 @@ import {
   Query,
 } from '@nestjs/common';
 import { RealTimeDataService } from './real-time-data.service';
-import { IsPublic } from 'src/common/decorator/is-public.decorator';
-import { LoRaEnum } from 'src/real-time-data/const/lora-enum.const';
-import { User } from 'src/users/decorator/user.decorator';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { IsPublic } from '../common/decorator/is-public.decorator';
+import { LoRaEnum } from '../real-time-data/const/lora-enum.const';
+import { User } from '../users/decorator/user.decorator';
+import { UsersModel } from '../users/entity/users.entity';
 import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
 import { TimeUnitEnum } from './const/time-unit.enum';
+import { RealTimeDataSaveService } from './real-time-data-save.service';
+import { UpdateContDeviceDto } from 'src/controllers/device/dto/update-devices-controller.dto';
 
 @Controller()
 export class RealTimeDataController {
-  constructor(private readonly realtimeService: RealTimeDataService) {}
+  constructor(
+    private readonly realtimeService: RealTimeDataService,
+    private readonly saveService: RealTimeDataSaveService,
+  ) {}
   /**
    * 데이터 - 센서 및 제어기 정보
    *  1) 실시간 데이터 입력 (IoT to Server)
@@ -75,9 +81,16 @@ export class RealTimeDataController {
         errorHttpStatusCode: HttpStatus.BAD_REQUEST,
       }),
     )
-    timeUnit: TimeUnitEnum,
+    timeUnit: TimeUnitEnum = TimeUnitEnum.MINUTE,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
   ) {
-    return await this.realtimeService.getTableAndGraph(deviceId, timeUnit);
+    return await this.saveService.getTableAndGraph(
+      deviceId,
+      startDate,
+      endDate,
+      timeUnit,
+    );
   }
 
   // 알람범위&보정 요청
@@ -98,9 +111,27 @@ export class RealTimeDataController {
   }
 
   // 제어기에 매핑되는 센서 리스트
-  @Get(':deviceId/list/:controllerId')
-  getSensorMappingList(
-    @Param('deviceId', ParseIntPipe) deviceId: number,
+  @Get('sensorList/:controllerId')
+  async getSensorMappingList(
     @Param('controllerId', ParseIntPipe) controllerId: number,
-  ) {}
+  ) {
+    return await this.realtimeService.getSensorListByControllerId(controllerId);
+  }
+
+  @Post('sensorList/:controllerId')
+  async postSensorMappingList(
+    @Param('controllerId') controllerId: number,
+    @Body() body: UpdateContDeviceDto,
+    @User() user: UsersModel,
+  ) {
+    /**
+     * 서비스를 호출하고 서비스에서는 수정된 값 중 센서 또는 manualValue가 변경될 경우 매핑리스트도 같이 변경해야한다.
+     */
+
+    return await this.realtimeService.setSensorFromController(
+      controllerId,
+      body,
+      user,
+    );
+  }
 }

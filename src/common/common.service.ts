@@ -11,7 +11,7 @@ import {
 import { FILTER_MAPPER } from './const/filter-mapper.const';
 import { ENV_HOST_KEY, ENV_PROTOCOL } from './const/env-keys.const';
 import { SortEnum } from './const/sort-enum.const';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../users/entity/users.entity';
 
 @Injectable()
 export class CommonService {

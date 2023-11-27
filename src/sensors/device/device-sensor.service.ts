@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateSensorDeviceDto } from './dto/update-device-sensor.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import { CreateSensorDeviceDto } from './dto/create-device-sensor.dto';
 import { SensorDevicePaginateDto } from './dto/paginate-device-sensor.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { SensorDeviceModel } from './entities/device-sensor.entity';
-import { DevicesService } from 'src/devices/devices.service';
+import { DevicesService } from '../../devices/devices.service';
 import { SensorSpecService } from '../specifications/specifications-sensor.service';
-import { CommonService } from 'src/common/common.service';
+import { CommonService } from '../../common/common.service';
 import { isEqual } from 'lodash';
 
 @Injectable()
@@ -160,5 +160,24 @@ export class SensorDeviceService {
       dto.spec = await this.specService.getSensorSpecificationById(5);
       await this.createDeviceSensor(dto, user);
     }
+  }
+
+  // deviceid와 controllerid를 받아서 관련된 센서리스트를 가져오는 로직
+  async getSensorListFromDeviceId(
+    deviceId: number,
+  ): Promise<SensorDeviceModel[]> {
+    const list = await this.deviceSensorRepository.find({
+      where: {
+        device: {
+          id: deviceId,
+        },
+      },
+    });
+
+    if (list.length === 0) {
+      throw new NotFoundException();
+    }
+
+    return list;
   }
 }

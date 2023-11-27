@@ -1,9 +1,10 @@
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
-import { DevicesModel } from 'src/devices/entities/device.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
+import { DevicesModel } from '../../../devices/entities/device.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ContSpecModel } from '../../specifications/entities/specifications-controller.entity';
 import { IsNumber, IsString } from 'class-validator';
 import { ContMapModel } from '../../mappings/entities/mappings-controller.entity';
+import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
 
 @Entity()
 export class ContDeviceModel extends BaseWithUpdateModel {
@@ -13,9 +14,9 @@ export class ContDeviceModel extends BaseWithUpdateModel {
   @ManyToOne(() => ContSpecModel)
   spec: ContSpecModel;
 
-  @Column({ comment: '연계 센서 명' })
-  @IsString()
-  sensor: string;
+  @ManyToOne(() => SensorDeviceModel)
+  @JoinColumn()
+  sensor: SensorDeviceModel;
 
   @Column({ comment: '제어 동작 값' })
   @IsNumber()

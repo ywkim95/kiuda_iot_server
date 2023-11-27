@@ -1,13 +1,12 @@
 import {
   IsBoolean,
   IsDate,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
-import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
+import { BaseWithUpdateModel } from '../../common/entity/base-with-update.entity';
+import { GatewaysModel } from '../../gateways/entities/gateway.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { SensorDeviceModel } from '../../sensors/device/entities/device-sensor.entity';
 import { DeviceEnum } from '../const/deviceEnum.const';

@@ -1,8 +1,7 @@
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
-import { stringValidationMessage } from 'src/common/validation-message/string-validation.message';
-import { UsersModel } from 'src/users/entity/users.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
+import { stringValidationMessage } from '../../../common/validation-message/string-validation.message';
+import { Column, Entity } from 'typeorm';
 
 @Entity()
 export class SensorSpecModel extends BaseWithUpdateModel {

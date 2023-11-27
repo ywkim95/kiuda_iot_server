@@ -1,5 +1,5 @@
 import { IsDate, IsNumber, IsOptional } from 'class-validator';
-import { DevicesModel } from 'src/devices/entities/device.entity';
+import { DevicesModel } from '../../../devices/entities/device.entity';
 import {
   Column,
   CreateDateColumn,

@@ -1,21 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, MoreThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CreateRealTimeSensorsDto } from './dto/create-real-time-sensor.dto';
 import { SensorRealTimeDataModel } from './entities/real-time/real-time-sensor.entity';
 import { ContRealTimeDataModel } from './entities/real-time/real-time-controller.entity';
 import { CreateRealTimeControllersDto } from './dto/create-real-time-contrller.dto';
 import { SensorDeviceModel } from '../sensors/device/entities/device-sensor.entity';
 import { splitString } from './const/splitString.const';
-import { DeviceEnum } from 'src/devices/const/deviceEnum.const';
-import { DevicesService } from 'src/devices/devices.service';
+import { DeviceEnum } from '../devices/const/deviceEnum.const';
+import { DevicesService } from '../devices/devices.service';
 import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
-import { TimeUnitEnum } from './const/time-unit.enum';
+import { UsersModel } from '../users/entity/users.entity';
 import { SensorDeviceService } from '../sensors/device/device-sensor.service';
-import { ContDeviceService } from 'src/controllers/device/device-controller.service';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { ContDeviceService } from '../controllers/device/device-controller.service';
 import { FiveMinutesAverageModel } from './entities/average/five-minutes-average.entity';
+import { ContMapService } from '../controllers/mappings/mappings-controller.service';
+import { UpdateContDeviceDto } from 'src/controllers/device/dto/update-devices-controller.dto';
+import { isEqual } from 'lodash';
 
 @Injectable()
 export class RealTimeDataService {
@@ -24,9 +25,11 @@ export class RealTimeDataService {
     private readonly realtimeSensorsRepository: Repository<SensorRealTimeDataModel>,
     @InjectRepository(ContRealTimeDataModel)
     private readonly realtimeControllersRepository: Repository<ContRealTimeDataModel>,
+    @InjectRepository(FiveMinutesAverageModel)
     private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
     private readonly contDeviceService: ContDeviceService,
+    private readonly contMapService: ContMapService,
     // private readonly realtimeGateway: RealTimeGateway,
   ) {}
 
@@ -156,84 +159,63 @@ export class RealTimeDataService {
   }
   //-------------------------------------------------------------------------
 
-  // 테이블과 그래프
-
-  async getTableAndGraph(deviceId: number, unit: TimeUnitEnum) {
+  async getSensorListByControllerId(controllerId: number) {
     /**
-     * 이건 누적 테이블을 만들어서 데이터를 보내줘야겠다.
+     * 1. 컨트롤러아이디를 통해서 센서아이디를 받아온다.
+     * 2. 센서아이디를 통해서 디바이스 아이디를 받아온다.
+     * 3. 디바이스아이디를 통해서 센서리스트를 받아오고 반환한다.
+     */
+    const sensorId = (
+      await this.contDeviceService.getDeviceControllerById(controllerId)
+    ).sensor.id;
+
+    const deviceId = (
+      await this.sensorDeviceService.getDeviceSensorById(sensorId)
+    ).device.id;
+
+    return await this.sensorDeviceService.getSensorListFromDeviceId(deviceId);
+  }
+
+  async setSensorFromController(
+    controllerId: number,
+    dto: UpdateContDeviceDto,
+    user: UsersModel,
+  ) {
+    /**
+     * 컨트롤러아이디와 dto를 받아서 내용을 업데이트 해준다.
+     * 해당하는 값을 업데이트 하되 manualValue가 들어오면 매핑리스트 엔티티도 업데이트를 해줘야한다.
+     * 센서가 들어오면 디바이스에서 센서를 변경한다.
      *
-     * 계산 방식은 일(day) 기준으로 한다.
      */
+    const currentCont =
+      await this.contDeviceService.getDeviceControllerById(controllerId);
 
-    switch (unit) {
-      case TimeUnitEnum.MINUTE:
-        return;
-      case TimeUnitEnum.DAILY:
-        return;
-      case TimeUnitEnum.MONTHLY:
-        return;
+    const comparisonData = {
+      ...currentCont,
+      ...dto,
+    };
+    if (isEqual(currentCont, comparisonData)) {
+      return currentCont;
     }
-  }
 
-  // 5분마다 누적데이터 저장로직
-  @Cron(CronExpression.EVERY_5_MINUTES)
-  async saveDataFiveMinutes() {
-    /**
-     * 1. 모든 iot센서들의 id를 가져와 id리스트를 만든다. 
-     * 2. id리스트를 기준으로 id별로 각각의 항목(s1~s20)의 5분동안의 데이터를 합치고 평균을 낸다.
-     * 3. 모든 id리스트의 합치기 계산이 끝나면 5분간의 데이터의 수를 더해서 평균값과 함께 모델에 넣는다.
-     * 4. 물론 5분간의 데이터 중 가장 첫번째 데이터의 저장일자와 마지막 저장일자를 측정 시작 시간, 측정 종료 시간에 넣는다.
-     * 5. 각각의 평균데이터리스트들은 자신에 해당하는 device의 정보를 알기위해서 device의 id를 가지고있는다. 
-     */
-
-    const sensorIds = await this.devicesService.getAllDeviceSensorIds();
-
-    const averageModels = await Promise.all(
-      sensorIds.map(id => this.)
-    )
-  }
-
-  private async processSensorData(sensorId: number): Promise<FiveMinutesAverageModel> {
-    const allSensorData = await this.getSensorData(sensorId);
-    const fiveMinutesAverageModel = new  FiveMinutesAverageModel();
-    fiveMinutesAverageModel.device = allSensorData[0]?.device;
-
-    for(let i = 1 ; i <= 20 ; i ++ ){
-      // 평균값 계산
-    let sum = 0;
-    let min = Number.MAX_VALUE;
-    let max = Number.MIN_VALUE;
-    let count = 0;
-
-    for( const data of allSensorData){
-      const sensorValue = data[`s${i}`];
-      if(sensorValue !== undefined) {
-        sum += sensorValue;
-        min = Math.min(min, sensorValue);
-      }
-      
+    if (dto.manualValue) {
+      const mappingList =
+        await this.contMapService.getMappingListByContId(controllerId);
+      mappingList[0].sensorRangeEnd = dto.manualValue;
+      mappingList[mappingList.length - 1].sensorRangeStart =
+        dto.manualValue + 0.1;
+      await this.contMapService.saveMappingList(mappingList);
     }
-    
-    }
-    
 
-    return ;
+    const newCont = {
+      ...comparisonData,
+      updatedBy: user.email,
+      updatedAt: new Date(),
+    };
+
+    return await this.realtimeControllersRepository.save(newCont);
   }
 
-  private async getSensorData(sensorId: number): Promise<SensorRealTimeDataModel[]> {
-    const fiveMinuteAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return this.realtimeSensorsRepository.find({
-      where:{
-        device: {
-          id: sensorId,
-        },
-        createdAt: MoreThan(fiveMinuteAgo),
-      },
-      relations: {
-        device: true
-      }
-    });
-  }
   //-------------------------------------------------------------------------
 
   async getAlarmRangeAndCalibrateById(gatewayId: number) {

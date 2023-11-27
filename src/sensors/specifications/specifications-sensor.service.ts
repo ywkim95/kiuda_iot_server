@@ -2,10 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { SensorSpecPaginateDto } from './dto/paginate-specifications-sensor.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SensorSpecModel } from './entities/specifications-sensor.entity';
-import { CommonService } from 'src/common/common.service';
+import { CommonService } from '../../common/common.service';
 import { Repository } from 'typeorm';
 import { CreateSensorSpecDto } from './dto/create-specifications-sensor.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import { UpdateSensorSpecDto } from './dto/update-specifications-sensor.dto';
 import { isEqual } from 'lodash';
 
