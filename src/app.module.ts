@@ -27,8 +27,6 @@ import { UsersModel } from './users/entity/users.entity';
 import { UsersLogModel } from './users/entity/users-log.entity';
 import { GatewaysModule } from './gateways/gateways.module';
 import { GatewaysModel } from './gateways/entities/gateway.entity';
-import { GatewaysGeneralLogModel } from './gateways/entities/gateway-general-log.entity';
-import { GatewaysConfigLogModel } from './gateways/entities/gateway-config-log.entity';
 import { SensorSpecModel } from './sensors/specifications/entities/specifications-sensor.entity';
 import { SensorDeviceModel } from './sensors/device/entities/device-sensor.entity';
 import { DevicesModule } from './devices/devices.module';
@@ -54,6 +52,13 @@ import { LogMiddleware } from './common/middleware/log.middleware';
 import { CustomSettingRangeModel } from './controllers/device/entities/custom-setting-range.entity';
 import { UserCustomValueModel } from './controllers/device/entities/user-custom-value.entity';
 import { SettingsModule } from './settings/settings.module';
+import { ContSpecLogModel } from './controllers/specifications/entities/specifications-log.entity';
+import { ContSpecStepLogModel } from './controllers/specifications/entities/specifications-step-log.entity';
+import { ContDeviceLogModel } from './controllers/device/entities/devices-controller-log.entity';
+import { CustomSettingRangeLogModel } from './controllers/device/entities/custom-setting-range-log.entity';
+import { UserCustomValueLogModel } from './controllers/device/entities/user-custom-value-log.entity';
+import { DevicesLogModel } from './devices/entities/device-log.entity';
+import { GatewaysLogModel } from './gateways/entities/gateway-log.entity';
 
 @Module({
   imports: [
@@ -82,23 +87,28 @@ import { SettingsModule } from './settings/settings.module';
         UsersModel,
         UsersLogModel,
         GatewaysModel,
-        GatewaysGeneralLogModel,
-        GatewaysConfigLogModel,
+        GatewaysLogModel,
         SensorSpecModel,
-        ContRealTimeDataModel,
         SensorRealTimeDataModel,
         SensorDeviceModel,
         DevicesModel,
+        DevicesLogModel,
         AccumulatedIrradianceModel,
         DailyAverageModel,
         FiveMinutesAverageModel,
         MonthlyAverageModel,
+        ContRealTimeDataModel,
         ContSpecStepModel,
         ContSpecModel,
+        ContSpecLogModel,
+        ContSpecStepLogModel,
         ContDeviceModel,
-        FirebaseModel,
+        ContDeviceLogModel,
         CustomSettingRangeModel,
+        CustomSettingRangeLogModel,
         UserCustomValueModel,
+        UserCustomValueLogModel,
+        FirebaseModel,
       ],
       synchronize: true,
     }),

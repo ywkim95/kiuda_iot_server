@@ -15,16 +15,25 @@ import { UserCustomValueModel } from './entities/user-custom-value.entity';
 import { isEqual } from 'lodash';
 import { CustomSettingRangeModel } from './entities/custom-setting-range.entity';
 import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
+import { ContDeviceLogModel } from './entities/devices-controller-log.entity';
+import { UserCustomValueLogModel } from './entities/user-custom-value-log.entity';
+import { CustomSettingRangeLogModel } from './entities/custom-setting-range-log.entity';
 
 @Injectable()
 export class ContDeviceService {
   constructor(
     @InjectRepository(ContDeviceModel)
     private readonly deviceControllersRepository: Repository<ContDeviceModel>,
+    @InjectRepository(ContDeviceLogModel)
+    private readonly deviceControllersLogRepository: Repository<ContDeviceLogModel>,
     @InjectRepository(UserCustomValueModel)
     private readonly userCustomValueRepository: Repository<UserCustomValueModel>,
+    @InjectRepository(UserCustomValueLogModel)
+    private readonly userCustomValueLogRepository: Repository<UserCustomValueLogModel>,
     @InjectRepository(CustomSettingRangeModel)
     private readonly customSettingRangeRepository: Repository<CustomSettingRangeModel>,
+    @InjectRepository(CustomSettingRangeLogModel)
+    private readonly customSettingRangeLogRepository: Repository<CustomSettingRangeLogModel>,
     private readonly commonService: CommonService,
     private readonly sensorDeviceService: SensorDeviceService,
   ) {}
@@ -154,14 +163,26 @@ export class ContDeviceService {
         });
 
         if (value) {
-          value = {
+          const comparisonData = {
             ...value,
             ...customValue,
-            updatedBy: user.email,
-            updatedAt: new Date(),
           };
+          if (isEqual(value, comparisonData)) {
+            return value;
+          }
+          comparisonData.updatedBy = user.email;
+          comparisonData.updatedAt = new Date();
 
-          await this.userCustomValueRepository.save(value);
+          await this.userCustomValueRepository.save(comparisonData);
+
+          // log
+          const customLog = this.createUserCustomValueLogModel(
+            contDevice,
+            value,
+            user.email,
+          );
+
+          await this.userCustomValueLogRepository.save(customLog);
         } else {
           const newValue = this.userCustomValueRepository.create({
             ...customValue,
@@ -189,7 +210,7 @@ export class ContDeviceService {
         savedContDevice.mappingSensorId,
       );
 
-      const customSettingRanges = [];
+      const customSettingRanges: CustomSettingRangeModel[] = [];
 
       for (let i = 0; i < userCustomValueList.length; i++) {
         let range: CustomSettingRangeModel;
@@ -200,6 +221,17 @@ export class ContDeviceService {
               id: savedContDevice.customSettingRanges[i].id,
             },
           });
+
+          if (!range) {
+            throw new NotFoundException();
+          }
+          const rangeLog = this.createCustomSettingRangeLogModel(
+            contDevice,
+            range,
+            user.email,
+          );
+
+          await this.customSettingRangeLogRepository.save(rangeLog);
         }
 
         const updatedRange =
@@ -243,12 +275,34 @@ export class ContDeviceService {
 
       await this.customSettingRangeRepository.save(customSettingRanges);
     }
+
+    // log
+    const deviceLog = this.createContDeviceLogModel(contDevice, user.email);
+
+    await this.deviceControllersLogRepository.save(deviceLog);
+
     return savedContDevice;
   }
 
   // 삭제
-  async deleteDeviceControllerById(id: number) {
+  async deleteDeviceControllerById(id: number, user: UsersModel) {
     const contDevice = await this.getDeviceControllerById(id);
+
+    const deviceLog = this.createContDeviceLogModel(contDevice, user.email);
+
+    const customLogs = contDevice.userCustomValues.map((value) =>
+      this.createUserCustomValueLogModel(contDevice, value, user.email),
+    );
+
+    const rangeLogs = contDevice.customSettingRanges.map((range) =>
+      this.createCustomSettingRangeLogModel(contDevice, range, user.email),
+    );
+
+    Promise.all([
+      await this.deviceControllersLogRepository.save(deviceLog),
+      await this.userCustomValueLogRepository.save(customLogs),
+      await this.customSettingRangeLogRepository.save(rangeLogs),
+    ]);
 
     await this.customSettingRangeRepository.delete({
       contDevice: { id: contDevice.id },
@@ -260,6 +314,56 @@ export class ContDeviceService {
 
     return await this.deviceControllersRepository.delete(id);
   }
+
+  // 제어기 디바이스 로그 모델 생성 로직
+  createContDeviceLogModel(contDevice: ContDeviceModel, userEmail: string) {
+    return this.deviceControllersLogRepository.create({
+      name: contDevice.name,
+      varName: contDevice.varName,
+      connectedDeviceId: contDevice.connectedDeviceId,
+      device: contDevice.device,
+      location: contDevice.location,
+      mappingSensorId: contDevice.mappingSensorId,
+      modelId: contDevice.id,
+      recordedBy: userEmail,
+      specification: contDevice.specification,
+      useYn: contDevice.useYn,
+    });
+  }
+
+  // 유저 커스텀 밸류 로그 모델 생성 로직
+  createUserCustomValueLogModel(
+    contDevice: ContDeviceModel,
+    value: UserCustomValueModel,
+    userEmail: string,
+  ) {
+    return this.userCustomValueLogRepository.create({
+      contDevice,
+      gab: value.gab,
+      manualValue: value.manualValue,
+      memo: value.memo,
+      modelId: value.id,
+      recordedBy: userEmail,
+    });
+  }
+
+  // 커스텀 세팅 레인지 로그 모델 생성 로직
+  createCustomSettingRangeLogModel(
+    contDevice: ContDeviceModel,
+    range: CustomSettingRangeModel,
+    userEmail: string,
+  ) {
+    return this.customSettingRangeLogRepository.create({
+      contDevice,
+      controllerValue: range.controllerValue,
+      modelId: range.id,
+      sensorRangeStart: range.sensorRangeStart,
+      sensorRangeEnd: range.sensorRangeEnd,
+      recordedBy: userEmail,
+    });
+  }
+
+  // -----------------------------------------------------------
 
   // 제어기 및 유저 커스텀 밸류 리스트
   async getContDeviceAndUserCustomValueListByGatewayId(gatewayId: number) {

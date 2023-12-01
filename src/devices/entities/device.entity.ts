@@ -52,16 +52,14 @@ export class DevicesModel extends BaseWithUpdateModel {
   })
   @IsDate()
   @IsOptional()
-  pkUpdateDate: Date;
+  pkUpdateDate?: Date;
 
   @Column({ comment: '사용 여부', default: false })
   @IsBoolean()
-  @IsOptional()
   useYn: boolean;
 
   @Column({ comment: '상태코드', default: 0 })
   @IsNumber()
-  @IsOptional()
   statusCode: number;
 
   @ManyToOne(() => GatewaysModel, (gateway) => gateway.devices)

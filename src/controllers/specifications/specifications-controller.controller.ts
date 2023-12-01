@@ -78,9 +78,11 @@ export class ContSpecController {
   async deleteDeivceControllers(
     @Param('specificationsControllerId', ParseIntPipe)
     specificationsControllerId: number,
+    @User() user: UsersModel,
   ) {
     return await this.controllerSpecificationsService.deleteSpecificationById(
       specificationsControllerId,
+      user,
     );
   }
 }

@@ -12,14 +12,14 @@ export class AccumulatedIrradianceModel {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ comment: '생성일자' })
   createdAt: Date;
 
-  @Column()
+  @Column({ comment: '데이터 수' })
   @IsNumber()
   dataCount: number;
 
-  @Column()
+  @Column({ comment: '누적 일사량' })
   @IsNumber()
   accumulatedIrradiance: number;
 }

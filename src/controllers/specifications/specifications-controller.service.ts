@@ -9,14 +9,20 @@ import { UsersModel } from 'src/users/entity/users.entity';
 import { UpdateContSpecDto } from './dto/update-specifications-controller.dto';
 import { isEqual } from 'lodash';
 import { ContSpecStepModel } from './entities/specifications-step.entity';
+import { ContSpecLogModel } from './entities/specifications-log.entity';
+import { ContSpecStepLogModel } from './entities/specifications-step-log.entity';
 
 @Injectable()
 export class ContSpecService {
   constructor(
     @InjectRepository(ContSpecModel)
     private readonly controllerSpecificationsRepository: Repository<ContSpecModel>,
+    @InjectRepository(ContSpecLogModel)
+    private readonly controllerSpecificationsLogRepository: Repository<ContSpecLogModel>,
     @InjectRepository(ContSpecStepModel)
     private readonly controllerSpecificationsStepRepository: Repository<ContSpecStepModel>,
+    @InjectRepository(ContSpecStepLogModel)
+    private readonly controllerSpecificationsStepLogRepository: Repository<ContSpecStepLogModel>,
     private readonly commonService: CommonService,
   ) {}
 
@@ -111,6 +117,11 @@ export class ContSpecService {
           };
 
           await this.controllerSpecificationsStepRepository.save(step);
+
+          // log
+          const stepLog = this.createContSpecStepLogModel(step, user.email);
+
+          await this.controllerSpecificationsStepLogRepository.save(stepLog);
         } else {
           const newStep = this.controllerSpecificationsStepRepository.create({
             ...stepDto,
@@ -122,17 +133,63 @@ export class ContSpecService {
       }
     }
 
+    // log
+    const specLog = this.createContSpecLogModel(spec, user.email);
+
+    await this.controllerSpecificationsLogRepository.save(specLog);
+
     return newSpec;
   }
 
   // 삭제
-  async deleteSpecificationById(id: number) {
+  async deleteSpecificationById(id: number, user: UsersModel) {
     const spec = await this.getControllerSpecificationById(id);
+
+    const specLog = this.createContSpecLogModel(spec, user.email);
+
+    const stepsLog = spec.specificationSteps.map((step) =>
+      this.createContSpecStepLogModel(step, user.email),
+    );
+
+    await Promise.all([
+      await this.controllerSpecificationsLogRepository.save(specLog),
+      await this.controllerSpecificationsStepLogRepository.save(stepsLog),
+    ]);
 
     await this.controllerSpecificationsStepRepository.delete({
       specification: { id: spec.id },
     });
+    await this.controllerSpecificationsRepository.delete(id);
 
-    return await this.controllerSpecificationsRepository.delete(id);
+    return true;
+  }
+
+  // 제어기 제원 로그 모델 생성 로직
+  createContSpecLogModel(spec: ContSpecModel, userEmail: string) {
+    return this.controllerSpecificationsLogRepository.create({
+      name: spec.name,
+      varName: spec.varName,
+      controllerType: spec.controllerType,
+      description: spec.description,
+      min: spec.min,
+      max: spec.max,
+      modelId: spec.id,
+      recordedBy: userEmail,
+      step: spec.step,
+      unit: spec.unit,
+      useYn: spec.useYn,
+    });
+  }
+
+  // 제어기 제원 스텝 로그 모델 생성 로직
+  createContSpecStepLogModel(step: ContSpecStepModel, userEmail: string) {
+    return this.controllerSpecificationsStepLogRepository.create({
+      label: step.label,
+      modelId: step.id,
+      specification: step.specification,
+      recordedBy: userEmail,
+      useYn: step.useYn,
+      value: step.value,
+    });
   }
 }

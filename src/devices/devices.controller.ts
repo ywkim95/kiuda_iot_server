@@ -55,7 +55,10 @@ export class DevicesController {
   // 삭제
   @Delete(':deviceId')
   @Roles(RolesEnum.ADMIN)
-  async deleteDevice(@Param('deviceId', ParseIntPipe) deviceId: number) {
-    return await this.devicesService.deleteDeviceById(deviceId);
+  async deleteDevice(
+    @Param('deviceId', ParseIntPipe) deviceId: number,
+    @User() user: UsersModel,
+  ) {
+    return await this.devicesService.deleteDeviceById(deviceId, user);
   }
 }

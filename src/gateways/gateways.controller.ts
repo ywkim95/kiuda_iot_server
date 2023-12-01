@@ -71,8 +71,11 @@ export class GatewaysController {
   @Delete(':gatewayId')
   @Roles(RolesEnum.ADMIN)
   @Roles(RolesEnum.ADMIN)
-  async deleteGateway(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
-    return await this.gatewaysService.deleteGatewayById(gatewayId);
+  async deleteGateway(
+    @Param('gatewayId', ParseIntPipe) gatewayId: number,
+    @User() user: UsersModel,
+  ) {
+    return await this.gatewaysService.deleteGatewayById(gatewayId, user);
   }
 
   // -----------------------------------------------------------

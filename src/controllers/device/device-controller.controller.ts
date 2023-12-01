@@ -27,7 +27,6 @@ export class ContDeviceController {
   // 페이지네이션
   // adminOrMe
   @Get()
-  @Roles(RolesEnum.ADMIN)
   async getDeviceControllers(@Body() body: ContDevicePaginateDto) {
     return await this.contDeviceService.paginateDeviceControllers(body);
   }
@@ -73,9 +72,11 @@ export class ContDeviceController {
   @Delete(':deviceControllerId')
   async deleteDeviceController(
     @Param('deviceControllerId', ParseIntPipe) deviceControllerId: number,
+    @User() user: UsersModel,
   ) {
     return await this.contDeviceService.deleteDeviceControllerById(
       deviceControllerId,
+      user,
     );
   }
 }

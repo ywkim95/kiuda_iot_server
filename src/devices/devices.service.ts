@@ -13,16 +13,21 @@ import { CommonService } from '../common/common.service';
 import { UsersModel } from '../users/entity/users.entity';
 import { isEqual } from 'lodash';
 import { DeviceEnum } from './const/deviceEnum.const';
+import { DevicesLogModel } from './entities/device-log.entity';
 
 @Injectable()
 export class DevicesService {
   constructor(
     @InjectRepository(DevicesModel)
     private readonly deviceRepository: Repository<DevicesModel>,
+    @InjectRepository(DevicesLogModel)
+    private readonly deviceLogRepository: Repository<DevicesLogModel>,
     private readonly commonService: CommonService,
   ) {}
 
   // 기본 CRUD + 페이지네이션
+
+  // pagination
   async paginateDevices(dto: DevicePaginationDto) {
     return await this.commonService.paginate(
       dto,
@@ -38,6 +43,7 @@ export class DevicesService {
     );
   }
 
+  // 등록
   async createDevice(dto: CreateDeviceDto, user: UsersModel) {
     const device = this.deviceRepository.create({
       ...dto,
@@ -49,6 +55,7 @@ export class DevicesService {
     return newDevice;
   }
 
+  // 조회
   async getDeviceById(id: number) {
     const device = await this.deviceRepository.findOne({
       where: {
@@ -66,6 +73,7 @@ export class DevicesService {
     return device;
   }
 
+  // 수정
   async updateDeviceById(id: number, dto: UpdateDeviceDto, user: UsersModel) {
     const device = await this.getDeviceById(id);
 
@@ -89,19 +97,47 @@ export class DevicesService {
        */
     }
 
+    const deviceLog = this.createDeviceLogModel(device, user.email);
+
+    await this.deviceLogRepository.save(deviceLog);
+
     return await this.deviceRepository.save(newDevice);
   }
 
-  async deleteDeviceById(id: number) {
+  // 삭제
+  async deleteDeviceById(id: number, user: UsersModel) {
     const device = await this.deviceRepository.findOne({
       where: {
         id,
       },
     });
+
     if (!device) {
       throw new NotFoundException();
     }
+
+    const deviceLog = this.createDeviceLogModel(device, user.email);
+
+    await this.deviceLogRepository.save(deviceLog);
+
     return await this.deviceRepository.delete(id);
+  }
+
+  createDeviceLogModel(device: DevicesModel, userEmail: string) {
+    return this.deviceLogRepository.create({
+      classify: device.classify,
+      clientId: device.clientId,
+      description: device.description,
+      gateway: device.gateway,
+      location: device.location,
+      modelId: device.id,
+      name: device.name,
+      pkUpdateDate: device.pkUpdateDate,
+      recordedBy: userEmail,
+      resetYn: device.resetYn,
+      statusCode: device.statusCode,
+      useYn: device.useYn,
+    });
   }
 
   // ------------------------------------------------------------------
@@ -182,20 +218,6 @@ export class DevicesService {
       .getMany();
 
     return ids.map((device) => device.id);
-  }
-
-  // 디바이스 여러 개 저장하기
-  // 아마도 게이트웨이나 다른 기타사항으로 업데이트 되는거같은디...
-  async saveDeviceList(list: DevicesModel[]) {
-    const deviceReturn = await Promise.all(
-      list.map((device) => this.deviceRepository.save(device)),
-    );
-    if (deviceReturn.length === 0) {
-      throw new BadRequestException(
-        '디바이스 리스트를 저장하는데 실패했습니다. 다시 한 번 리스트를 확인해주세요',
-      );
-    }
-    return true;
   }
 
   // 센서 및 제어기 디바이스 useYn 리스트

@@ -16,10 +16,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { DevicesModel } from '../../devices/entities/device.entity';
-
-function formatStringAsThreeDigit(value: string): string {
-  return value.padStart(3, '0');
-}
+import { formatStringAsThreeDigit } from '../const/format-string-as-three-digit.const';
 
 @Entity()
 export class GatewaysModel extends BaseWithUpdateModel {
@@ -32,80 +29,72 @@ export class GatewaysModel extends BaseWithUpdateModel {
   // if(field_list.length === 1) a~~~~
   // else b~~~~
 
-  @Column()
+  @Column({ comment: '국가아이디' })
   @IsString()
   countryId: string;
 
-  @Column()
+  @Column({ comment: '지역아이디' })
   @IsString()
   areaId: string;
 
-  @Column()
+  @Column({ comment: '게이트웨이아이디' })
   @IsString()
   gatewayId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: '설치위치' })
   @IsString()
   @IsOptional()
   location?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: '게이트웨이 명' })
   @IsString()
   @IsOptional()
   name?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: '설명' })
   @IsString()
   @IsOptional()
   description?: string;
 
-  @Column()
+  @Column({ comment: '주파수' })
   @IsNumber()
   frequency: number;
 
-  @Column()
+  @Column({ comment: 'TXPower' })
   @IsNumber()
   txPower: number;
 
-  @Column()
+  @Column({ comment: 'RFConfig' })
   @IsNumber()
   rfConfig: number;
 
-  @Column({
-    default: 1,
-  })
+  @Column({ comment: '게이트웨이에 속한 장비 자동증가 번호', default: 1 })
   @IsNumber()
   gatewayIdInc: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, comment: '제어기 제어 스크립트' })
   @IsString()
   @IsOptional()
   controlScript?: string;
 
-  @Column()
+  @Column({ comment: '와이파이 아이디' })
   @IsString()
   ssid: string;
 
-  @Column()
+  @Column({ comment: '와이파이 비밀번호' })
   @IsString()
   ssidPassword: string;
 
-  @Column({
-    default: false,
-  })
+  @Column({ default: false, comment: '리셋 여부' })
   @IsBoolean()
   resetYn: boolean;
 
-  @Column({
-    nullable: true,
-  })
+  @Column({ nullable: true, comment: '마지막 PK 변경 여부' })
   @IsDate()
   @IsOptional()
   lastPkUpdateDate?: Date;
 
-  @Column({
-    default: true,
-  })
+  @Column({ default: true, comment: '사용 유무' })
   @IsBoolean()
   useYn: boolean;
 

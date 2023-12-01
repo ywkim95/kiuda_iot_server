@@ -53,6 +53,5 @@ export class ContSpecModel extends BaseWithUpdateModel {
 
   @Column({ comment: '사용 유무', default: true })
   @IsBoolean()
-  @IsOptional()
-  useYn?: boolean;
+  useYn: boolean;
 }

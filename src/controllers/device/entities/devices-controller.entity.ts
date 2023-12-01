@@ -3,7 +3,6 @@ import { DevicesModel } from '../../../devices/entities/device.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ContSpecModel } from '../../specifications/entities/specifications-controller.entity';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
-import { SensorDeviceModel } from '../../../sensors/device/entities/device-sensor.entity';
 import { CustomSettingRangeModel } from './custom-setting-range.entity';
 import { UserCustomValueModel } from './user-custom-value.entity';
 

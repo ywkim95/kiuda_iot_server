@@ -11,11 +11,14 @@ import { isEqual } from 'lodash';
 import { UpdateIdGatewayDto } from './dto/update-id-gateway.dto';
 import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
 import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
+import { GatewaysLogModel } from './entities/gateway-log.entity';
 @Injectable()
 export class GatewaysService {
   constructor(
     @InjectRepository(GatewaysModel)
     private readonly gatewaysRepository: Repository<GatewaysModel>,
+    @InjectRepository(GatewaysLogModel)
+    private readonly gatewaysLogRepository: Repository<GatewaysLogModel>,
     private readonly commonService: CommonService,
   ) {
     /**
@@ -28,6 +31,7 @@ export class GatewaysService {
 
   // CRUD + Pagination
 
+  // pagination
   async paginateGateways(dto: GatewaysPaginationDto) {
     return await this.commonService.paginate(
       dto,
@@ -41,6 +45,7 @@ export class GatewaysService {
     );
   }
 
+  // 조회
   async getGatewayById(id: number) {
     const gateway = await this.gatewaysRepository.findOne({
       where: {
@@ -53,6 +58,7 @@ export class GatewaysService {
     return gateway;
   }
 
+  // 등록
   async createGateway(dto: CreateGatewayDto, user: UsersModel) {
     const gateway = this.gatewaysRepository.create({
       ...dto,
@@ -65,6 +71,7 @@ export class GatewaysService {
     return newGateway;
   }
 
+  // 수정
   async updateGatewayById(id: number, dto: UpdateGatewayDto, user: UsersModel) {
     const gateway = await this.getGatewayById(id);
 
@@ -80,11 +87,20 @@ export class GatewaysService {
       updatedBy: user.email,
     };
 
+    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+
+    await this.gatewaysLogRepository.save(gatewayLog);
+
     return await this.gatewaysRepository.save(newGateway);
   }
 
-  async deleteGatewayById(id: number) {
-    await this.getGatewayById(id);
+  // 삭제
+  async deleteGatewayById(id: number, user: UsersModel) {
+    const gateway = await this.getGatewayById(id);
+
+    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+
+    await this.gatewaysLogRepository.save(gatewayLog);
 
     return await this.gatewaysRepository.delete(id);
   }
@@ -109,6 +125,7 @@ export class GatewaysService {
       ...gateway,
       ...dto,
     };
+
     if (isEqual(gateway, comparisonData)) {
       return gateway;
     }
@@ -119,6 +136,10 @@ export class GatewaysService {
       updatedBy: user.email,
       lastPkUpdateDate: new Date(),
     };
+
+    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+
+    await this.gatewaysLogRepository.save(gatewayLog);
 
     return await this.gatewaysRepository.save(newGateway);
   }
@@ -131,6 +152,7 @@ export class GatewaysService {
       ...gateway,
       ...dto,
     };
+
     if (isEqual(gateway, comparisonData)) {
       return gateway;
     }
@@ -140,6 +162,10 @@ export class GatewaysService {
       updatedAt: new Date(),
       updatedBy: user.email,
     };
+
+    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+
+    await this.gatewaysLogRepository.save(gatewayLog);
 
     return await this.gatewaysRepository.save(newGateway);
   }
@@ -156,6 +182,7 @@ export class GatewaysService {
       ...gateway,
       ...dto,
     };
+
     if (isEqual(gateway, comparisonData)) {
       return gateway;
     }
@@ -165,6 +192,10 @@ export class GatewaysService {
       updatedAt: new Date(),
       updatedBy: user.email,
     };
+
+    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+
+    await this.gatewaysLogRepository.save(gatewayLog);
 
     return await this.gatewaysRepository.save(newGateway);
   }
@@ -191,6 +222,30 @@ export class GatewaysService {
       throw new NotFoundException();
     }
     return gateway.devices;
+  }
+
+  createGatewayLogModel(gateway: GatewaysModel, userEmail: string) {
+    return this.gatewaysLogRepository.create({
+      modelId: gateway.id,
+      countryId: gateway.countryId,
+      areaId: gateway.areaId,
+      gatewayId: gateway.gatewayId,
+      name: gateway.name,
+      location: gateway.location,
+      owner: gateway.owner,
+      ssid: gateway.ssid,
+      ssidPassword: gateway.ssidPassword,
+      controlScript: gateway.controlScript,
+      frequency: gateway.frequency,
+      txPower: gateway.txPower,
+      rfConfig: gateway.rfConfig,
+      gatewayIdInc: gateway.gatewayIdInc,
+      description: gateway.description,
+      lastPkUpdateDate: gateway.lastPkUpdateDate,
+      useYn: gateway.useYn,
+      resetYn: gateway.resetYn,
+      recordedBy: userEmail,
+    });
   }
 
   // 자동생성기
