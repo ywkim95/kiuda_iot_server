@@ -15,8 +15,11 @@ import { PaginateContSpecDto } from './dto/paginate-specifications-controller.dt
 import { UpdateContSpecDto } from './dto/update-specifications-controller.dto';
 import { CreateContSpecDto } from './dto/create-specifications-controller.dto';
 import { ContSpecService } from './specifications-controller.service';
+import { Roles } from 'src/users/decorator/roles.decorator';
+import { RolesEnum } from 'src/users/const/roles.const';
 
 @Controller('controllers/specifications')
+@Roles(RolesEnum.ADMIN)
 export class ContSpecController {
   constructor(
     private readonly controllerSpecificationsService: ContSpecService,

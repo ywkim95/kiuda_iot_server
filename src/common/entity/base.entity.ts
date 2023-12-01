@@ -1,3 +1,4 @@
+import { IsDate, IsOptional, IsString } from 'class-validator';
 import { Column, CreateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
 /**
  * common
@@ -11,8 +12,11 @@ export abstract class BaseModel {
   id: number;
 
   @CreateDateColumn({ comment: '생성 일자' })
+  @IsDate()
   createdAt: Date;
 
-  @Column({ comment: '생성한 사용자' })
-  createdBy: string;
+  @Column({ nullable: true, comment: '생성한 사용자' })
+  @IsString()
+  @IsOptional()
+  createdBy?: string;
 }

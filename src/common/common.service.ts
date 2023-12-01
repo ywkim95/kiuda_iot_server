@@ -152,48 +152,80 @@ export class CommonService {
         `where 필터는 '__'로 split 했을때 길이가 2 또는 3이 되어야합니다. 문제되는 키 값 : ${key}`,
       );
     }
-    if (split.length === 2) {
-      const [_, field] = split;
-      options[field] = value;
-    } else {
-      const [_, field, operator] = split;
 
-      if (UsersModel) {
-        let field_list = field.split('_');
-
-        if (field_list.length !== 1 && field_list.length !== 2) {
-          throw new BadRequestException(
-            `field의 구성은 '_'로 split 했을때 길이가 1 또는 2가 되어야합니다. 문제되는 키 값 : ${field}`,
-          );
-        }
-        if (!options[field_list[0]]) {
-          options[field_list[0]] = {};
-        }
-
-        if (field_list.length === 1) {
-          if (operator === 'i_like') {
-            options[field] = FILTER_MAPPER[operator](`%${value}%`);
-          } else {
-            options[field] = FILTER_MAPPER[operator](value);
-          }
-        } else {
-          if (operator === 'i_like') {
-            options[field_list[0]][field_list[1]] = FILTER_MAPPER[operator](
-              `%${value}%`,
-            );
-          } else {
-            options[field_list[0]][field_list[1]] =
-              FILTER_MAPPER[operator](value);
-          }
-        }
+    const setFilterOptions = (field: string, subfield?: string) => {
+      let target = subfield ? options[field][subfield] : options[field];
+      if (split[2] === 'i_like') {
+        target = FILTER_MAPPER[split[2]](`%${value}%`);
       } else {
-        if (operator === 'i_like') {
-          options[field] = FILTER_MAPPER[operator](`%${value}%`);
-        } else {
-          options[field] = FILTER_MAPPER[operator](value);
-        }
+        target = FILTER_MAPPER[split[2]](value);
       }
+    };
+
+    const [_, field, operator] = split;
+    const fieldList = field.split('_');
+
+    if (fieldList.length < 1 || fieldList.length > 2) {
+      throw new BadRequestException(
+        `field의 구성은 '_'로 split 했을때 길이가 1 또는 2가 되어야합니다. 문제되는 키 값 : ${field}`,
+      );
     }
+
+    if (fieldList.length === 1) {
+      if (!options[fieldList[0]]) {
+        options[fieldList[0]] = {};
+      }
+      setFilterOptions(fieldList[0]);
+    } else {
+      if (!options[fieldList[0]]) {
+        options[fieldList[0]] = {};
+      }
+      setFilterOptions(fieldList[0], fieldList[1]);
+    }
+
+    // if (split.length === 2) {
+    //   const [_, field] = split;
+    //   options[field] = value;
+    // } else {
+    //   const [_, field, operator] = split;
+
+    //   if (UsersModel) {
+    //     let field_list = field.split('_');
+
+    //     if (field_list.length !== 1 && field_list.length !== 2) {
+    //       throw new BadRequestException(
+    //         `field의 구성은 '_'로 split 했을때 길이가 1 또는 2가 되어야합니다. 문제되는 키 값 : ${field}`,
+    //       );
+    //     }
+
+    //     if (!options[field_list[0]]) {
+    //       options[field_list[0]] = {};
+    //     }
+
+    //     if (field_list.length === 1) {
+    //       if (operator === 'i_like') {
+    //         options[field] = FILTER_MAPPER[operator](`%${value}%`);
+    //       } else {
+    //         options[field] = FILTER_MAPPER[operator](value);
+    //       }
+    //     } else {
+    //       if (operator === 'i_like') {
+    //         options[field_list[0]][field_list[1]] = FILTER_MAPPER[operator](
+    //           `%${value}%`,
+    //         );
+    //       } else {
+    //         options[field_list[0]][field_list[1]] =
+    //           FILTER_MAPPER[operator](value);
+    //       }
+    //     }
+    //   } else {
+    //     if (operator === 'i_like') {
+    //       options[field] = FILTER_MAPPER[operator](`%${value}%`);
+    //     } else {
+    //       options[field] = FILTER_MAPPER[operator](value);
+    //     }
+    //   }
+    // }
     return options;
   }
 }

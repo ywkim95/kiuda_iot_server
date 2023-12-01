@@ -58,8 +58,8 @@ describe('RealTimeDataController', () => {
         controller.getTableAndGraph(
           1,
           TimeUnitEnum.MINUTE,
-          'invalid',
-          'invalid',
+          '2023-01-02T00:00:00Z',
+          '2023-01-02T00:05:00Z',
         ),
       ).rejects.toThrow(BadRequestException);
     });

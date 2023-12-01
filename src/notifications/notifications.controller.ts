@@ -20,8 +20,6 @@ export class NotificationsController {
    * 2. 알람 조회(조회시 확인 플래그 처리)
    *
    */
-  @Post()
-  postNotification() {}
 
   @Get(':userId')
   getNotification(@Param('userId') userId: number) {}

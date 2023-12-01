@@ -8,12 +8,15 @@ import { CreateContSpecDto } from './dto/create-specifications-controller.dto';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { UpdateContSpecDto } from './dto/update-specifications-controller.dto';
 import { isEqual } from 'lodash';
+import { ContSpecStepModel } from './entities/specifications-step.entity';
 
 @Injectable()
 export class ContSpecService {
   constructor(
     @InjectRepository(ContSpecModel)
     private readonly controllerSpecificationsRepository: Repository<ContSpecModel>,
+    @InjectRepository(ContSpecStepModel)
+    private readonly controllerSpecificationsStepRepository: Repository<ContSpecStepModel>,
     private readonly commonService: CommonService,
   ) {}
 
@@ -43,16 +46,27 @@ export class ContSpecService {
   }
 
   // 등록
+  // 나중에 프론트에서 digital만들때 그냥 0값과 1값 알아서 만들어서 보내기
   async createSpecification(dto: CreateContSpecDto, user: UsersModel) {
     const spec = this.controllerSpecificationsRepository.create({
       ...dto,
       createdBy: user.email,
-      updatedBy: user.email,
     });
 
     const newSpec = await this.controllerSpecificationsRepository.save(spec);
 
-    return newSpec;
+    if (dto.specificationSteps && dto.specificationSteps.length > 0) {
+      const specSteps = dto.specificationSteps.map((stepDto) => {
+        return this.controllerSpecificationsStepRepository.create({
+          ...stepDto,
+          specification: newSpec,
+          createdBy: user.email,
+        });
+      });
+      await this.controllerSpecificationsStepRepository.save(specSteps);
+    }
+
+    return true;
   }
 
   // 수정
@@ -68,7 +82,7 @@ export class ContSpecService {
       ...dto,
     };
 
-    if (isEqual(spec, comparisonData)) {
+    if (isEqual(spec, comparisonData) && !dto.specificationSteps) {
       return spec;
     }
 
@@ -77,13 +91,47 @@ export class ContSpecService {
       updatedBy: user.email,
       updatedAt: new Date(),
     };
+    await this.controllerSpecificationsRepository.save(newSpec);
 
-    return await this.controllerSpecificationsRepository.save(newSpec);
+    if (dto.specificationSteps) {
+      for (const stepDto of dto.specificationSteps) {
+        let step = await this.controllerSpecificationsStepRepository.findOne({
+          where: {
+            id: stepDto.id,
+            specification: spec,
+          },
+        });
+
+        if (step) {
+          step = {
+            ...step,
+            ...stepDto,
+            updatedBy: user.email,
+            updatedAt: new Date(),
+          };
+
+          await this.controllerSpecificationsStepRepository.save(step);
+        } else {
+          const newStep = this.controllerSpecificationsStepRepository.create({
+            ...stepDto,
+            specification: newSpec,
+            createdBy: user.email,
+          });
+          await this.controllerSpecificationsStepRepository.save(newStep);
+        }
+      }
+    }
+
+    return newSpec;
   }
 
   // 삭제
   async deleteSpecificationById(id: number) {
-    await this.getControllerSpecificationById(id);
+    const spec = await this.getControllerSpecificationById(id);
+
+    await this.controllerSpecificationsStepRepository.delete({
+      specification: { id: spec.id },
+    });
 
     return await this.controllerSpecificationsRepository.delete(id);
   }

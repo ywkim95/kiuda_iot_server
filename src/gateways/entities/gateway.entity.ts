@@ -1,4 +1,10 @@
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { BaseWithUpdateModel } from '../../common/entity/base-with-update.entity';
 import { UsersModel } from '../../users/entity/users.entity';
 import {
@@ -91,10 +97,11 @@ export class GatewaysModel extends BaseWithUpdateModel {
   resetYn: boolean;
 
   @Column({
-    default: false,
+    nullable: true,
   })
-  @IsBoolean()
-  pkUpdateYn: boolean;
+  @IsDate()
+  @IsOptional()
+  lastPkUpdateDate?: Date;
 
   @Column({
     default: true,

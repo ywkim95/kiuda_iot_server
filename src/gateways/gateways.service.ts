@@ -8,6 +8,9 @@ import { UsersModel } from '../users/entity/users.entity';
 import { CreateGatewayDto } from './dto/create-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
 import { isEqual } from 'lodash';
+import { UpdateIdGatewayDto } from './dto/update-id-gateway.dto';
+import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
+import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
 @Injectable()
 export class GatewaysService {
   constructor(
@@ -23,8 +26,10 @@ export class GatewaysService {
      */
   }
 
+  // CRUD + Pagination
+
   async paginateGateways(dto: GatewaysPaginationDto) {
-    return this.commonService.paginate(
+    return await this.commonService.paginate(
       dto,
       this.gatewaysRepository,
       {
@@ -84,6 +89,9 @@ export class GatewaysService {
     return await this.gatewaysRepository.delete(id);
   }
 
+  // ------------------------------------------------------------------------
+
+  // 게이트웨이 리셋
   async gatewayReset(id: number) {
     const gateway = await this.getGatewayById(id);
     /**
@@ -93,19 +101,99 @@ export class GatewaysService {
     return true;
   }
 
-  async setGatewayUseYn(id: number, useYn: boolean, user: UsersModel) {
+  // 게이트웨이 주소(id) 변경
+  async updateGatewayId(id: number, dto: UpdateIdGatewayDto, user: UsersModel) {
     const gateway = await this.getGatewayById(id);
 
-    gateway.useYn = useYn;
+    const comparisonData = {
+      ...gateway,
+      ...dto,
+    };
+    if (isEqual(gateway, comparisonData)) {
+      return gateway;
+    }
 
-    gateway.updatedAt = new Date();
-    gateway.updatedBy = user.email;
+    const newGateway = {
+      ...comparisonData,
+      updatedAt: new Date(),
+      updatedBy: user.email,
+      lastPkUpdateDate: new Date(),
+    };
 
-    await this.gatewaysRepository.save(gateway);
-
-    return true;
+    return await this.gatewaysRepository.save(newGateway);
   }
 
+  // 게이트웨이 ssid 변경
+  async updateSsid(id: number, dto: UpdateSsidGatewayDto, user: UsersModel) {
+    const gateway = await this.getGatewayById(id);
+
+    const comparisonData = {
+      ...gateway,
+      ...dto,
+    };
+    if (isEqual(gateway, comparisonData)) {
+      return gateway;
+    }
+
+    const newGateway = {
+      ...comparisonData,
+      updatedAt: new Date(),
+      updatedBy: user.email,
+    };
+
+    return await this.gatewaysRepository.save(newGateway);
+  }
+
+  // 게이트웨이 주파수 변경
+  async updateFrequency(
+    id: number,
+    dto: UpdateFrequencyGatewayDto,
+    user: UsersModel,
+  ) {
+    const gateway = await this.getGatewayById(id);
+
+    const comparisonData = {
+      ...gateway,
+      ...dto,
+    };
+    if (isEqual(gateway, comparisonData)) {
+      return gateway;
+    }
+
+    const newGateway = {
+      ...comparisonData,
+      updatedAt: new Date(),
+      updatedBy: user.email,
+    };
+
+    return await this.gatewaysRepository.save(newGateway);
+  }
+
+  // 게이트웨이 아이디를 통한 디바이스 리스트 반환
+  async getDevicesFromGatewayId(id: number) {
+    const gateway = await this.gatewaysRepository.findOne({
+      where: {
+        id,
+      },
+      relations: [
+        'devices',
+        'devices.sensors',
+        'devices.controllers',
+        'devices.controllers.mappingDevices',
+        'devices.controllers.mappingDevices.sensors',
+      ],
+      order: {
+        id: 'ASC',
+      },
+    });
+
+    if (!gateway) {
+      throw new NotFoundException();
+    }
+    return gateway.devices;
+  }
+
+  // 자동생성기
   async generateGateways(user: UsersModel) {
     for (let i = 1; i <= 20; i++) {
       await this.gatewaysRepository.save({

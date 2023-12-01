@@ -38,14 +38,12 @@ export class DevicesController {
 
   // 조회
   @Get(':deviceId')
-  @Roles(RolesEnum.ADMIN)
   async getDevice(@Param('deviceId', ParseIntPipe) deviceId: number) {
     return await this.devicesService.getDeviceById(deviceId);
   }
 
   // 수정
   @Patch(':deviceId')
-  @Roles(RolesEnum.ADMIN)
   async patchDevice(
     @Param('deviceId', ParseIntPipe) deviceId: number,
     @Body() body: UpdateDeviceDto,

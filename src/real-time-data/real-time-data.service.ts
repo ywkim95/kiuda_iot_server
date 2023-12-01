@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateRealTimeSensorsDto } from './dto/create-real-time-sensor.dto';
@@ -12,11 +16,9 @@ import { DevicesService } from '../devices/devices.service';
 import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
 import { UsersModel } from '../users/entity/users.entity';
 import { SensorDeviceService } from '../sensors/device/device-sensor.service';
-import { ContDeviceService } from '../controllers/device/device-controller.service';
 import { FiveMinutesAverageModel } from './entities/average/five-minutes-average.entity';
-import { ContMapService } from '../controllers/mappings/mappings-controller.service';
-import { UpdateContDeviceDto } from 'src/controllers/device/dto/update-devices-controller.dto';
-import { isEqual } from 'lodash';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { WarningEnum, sentence } from 'src/notifications/const/sentence.const';
 
 @Injectable()
 export class RealTimeDataService {
@@ -28,9 +30,7 @@ export class RealTimeDataService {
     @InjectRepository(FiveMinutesAverageModel)
     private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
-    private readonly contDeviceService: ContDeviceService,
-    private readonly contMapService: ContMapService,
-    // private readonly realtimeGateway: RealTimeGateway,
+    private readonly notiService: NotificationsService,
   ) {}
 
   // 데이터 받기/분기
@@ -51,6 +51,7 @@ export class RealTimeDataService {
      * saveData로 던진다.
      */
     let data: SensorRealTimeDataModel | ContRealTimeDataModel;
+
     if (isSensor) {
       data = await this.saveSensorData(dto);
     } else {
@@ -63,27 +64,79 @@ export class RealTimeDataService {
     return true;
   }
 
-  // 저장
+  // 센서 데이터 저장 및 유효성 검사
   private async saveSensorData(dto: CreateRealTimeSensorsDto) {
-    const device = await this.sensorDeviceService.getSensorDeviceFromRealTime(
-      dto.ghid,
-      dto.glid,
-      dto.gid,
-      dto.cid,
+    try {
+      const device = await this.devicesService.getOnceDeviceByIdList(
+        dto.ghid,
+        dto.glid,
+        dto.gid,
+        dto.cid,
+      );
+      const user = device.gateway.owner;
+      const sensorDeviceList = device.sensors;
+
+      await this.validateAndNotify(sensorDeviceList, dto, user);
+
+      const data = this.realtimeSensorsRepository.create({ ...dto, device });
+      const newData = await this.realtimeSensorsRepository.save(data);
+
+      return newData;
+    } catch (error) {
+      // 에러 처리 로직
+      throw new ConflictException();
+    }
+  }
+
+  // 각 센서 장치에 대한 유효성 검사 및 알림 전송
+  private async validateAndNotify(
+    sensorDeviceList: SensorDeviceModel[],
+    dto: CreateRealTimeSensorsDto,
+    user: UsersModel,
+  ) {
+    const notificationPromises = sensorDeviceList.map(
+      async (sensorDevice, index) => {
+        const data = dto[`s${index + 1}`];
+        const message = await this.validateSensorData(sensorDevice, data);
+
+        if (message) {
+          await this.notiService.registerNotification(
+            sensorDevice.device.name,
+            message,
+            user,
+            sensorDevice.device,
+          );
+        }
+      },
     );
 
-    const data = this.realtimeSensorsRepository.create({
-      ...dto,
-      device,
-    });
+    await Promise.all(notificationPromises);
+  }
 
-    const newData = await this.realtimeSensorsRepository.save(data);
+  // 센서 데이터의 유효성을 검사하는 함수
+  private async validateSensorData(
+    sensorDevice: SensorDeviceModel,
+    data: number,
+  ): Promise<string | null> {
+    const checkData = sensorDevice.spec;
+    let message = null;
 
-    return newData;
+    if (data > checkData.lowWarningStart && data <= checkData.lowWarningEnd) {
+      message = sentence(sensorDevice.name, WarningEnum.LOW, data);
+    } else if (
+      data > checkData.highWarningStart &&
+      data <= checkData.highWarningEnd
+    ) {
+      message = sentence(sensorDevice.name, WarningEnum.HIGH, data);
+    } else if (data > checkData.dangerStart && data <= checkData.dangerEnd) {
+      message = sentence(sensorDevice.name, WarningEnum.DANGER, data);
+    }
+
+    return message;
   }
 
   private async saveControllerData(dto: CreateRealTimeControllersDto) {
-    const device = await this.contDeviceService.getContDeviceFromRealTime(
+    const device = await this.devicesService.getOnceDeviceByIdList(
       dto.ghid,
       dto.glid,
       dto.gid,
@@ -92,7 +145,7 @@ export class RealTimeDataService {
 
     const data = this.realtimeControllersRepository.create({
       ...dto,
-      device,
+      device: device,
     });
 
     const newData = await this.realtimeControllersRepository.save(data);
@@ -111,19 +164,18 @@ export class RealTimeDataService {
       areaId,
       gatewayId,
     );
-    let dataList = [];
-    for await (const device of deviceList) {
+
+    const fetchDataPromises = deviceList.map((device) => {
       if (device.classify === DeviceEnum.SENSOR) {
-        const data = await this.findOneSensorData(device.id);
-        dataList.push(data);
+        return this.findOneSensorData(device.id);
       } else {
-        const data = await this.findOneControllerData(device.id);
-        dataList.push(data);
+        return this.findOneControllerData(device.id);
       }
-    }
+    });
+
+    const dataList = await Promise.all(fetchDataPromises);
 
     return dataList;
-    // await this.sendData(dataList, roomId);
   }
 
   private async findOneSensorData(deviceId: number) {
@@ -156,64 +208,6 @@ export class RealTimeDataService {
         device: true,
       },
     });
-  }
-  //-------------------------------------------------------------------------
-
-  async getSensorListByControllerId(controllerId: number) {
-    /**
-     * 1. 컨트롤러아이디를 통해서 센서아이디를 받아온다.
-     * 2. 센서아이디를 통해서 디바이스 아이디를 받아온다.
-     * 3. 디바이스아이디를 통해서 센서리스트를 받아오고 반환한다.
-     */
-    const sensorId = (
-      await this.contDeviceService.getDeviceControllerById(controllerId)
-    ).sensor.id;
-
-    const deviceId = (
-      await this.sensorDeviceService.getDeviceSensorById(sensorId)
-    ).device.id;
-
-    return await this.sensorDeviceService.getSensorListFromDeviceId(deviceId);
-  }
-
-  async setSensorFromController(
-    controllerId: number,
-    dto: UpdateContDeviceDto,
-    user: UsersModel,
-  ) {
-    /**
-     * 컨트롤러아이디와 dto를 받아서 내용을 업데이트 해준다.
-     * 해당하는 값을 업데이트 하되 manualValue가 들어오면 매핑리스트 엔티티도 업데이트를 해줘야한다.
-     * 센서가 들어오면 디바이스에서 센서를 변경한다.
-     *
-     */
-    const currentCont =
-      await this.contDeviceService.getDeviceControllerById(controllerId);
-
-    const comparisonData = {
-      ...currentCont,
-      ...dto,
-    };
-    if (isEqual(currentCont, comparisonData)) {
-      return currentCont;
-    }
-
-    if (dto.manualValue) {
-      const mappingList =
-        await this.contMapService.getMappingListByContId(controllerId);
-      mappingList[0].sensorRangeEnd = dto.manualValue;
-      mappingList[mappingList.length - 1].sensorRangeStart =
-        dto.manualValue + 0.1;
-      await this.contMapService.saveMappingList(mappingList);
-    }
-
-    const newCont = {
-      ...comparisonData,
-      updatedBy: user.email,
-      updatedAt: new Date(),
-    };
-
-    return await this.realtimeControllersRepository.save(newCont);
   }
 
   //-------------------------------------------------------------------------
@@ -261,7 +255,7 @@ export class RealTimeDataService {
   isSensorUpdated(
     sensorsMap: Map<number, SensorDeviceModel>,
     sensorDto: SensorDeviceModel,
-  ) {
+  ): boolean {
     const currentSensor: SensorDeviceModel = sensorsMap[sensorDto.id];
     const isCorrectionValueUpdated =
       currentSensor.correctionValue !== sensorDto.correctionValue;
@@ -277,7 +271,7 @@ export class RealTimeDataService {
     currentSensor: SensorDeviceModel,
     newSensorData: SensorDeviceModel,
     updatedBy: string,
-  ) {
+  ): Promise<void> {
     const updatedSensor: SensorDeviceModel = {
       ...currentSensor,
       ...newSensorData,

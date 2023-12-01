@@ -1,25 +1,18 @@
 import {
-  BadRequestException,
-  Body,
   Controller,
   Get,
   HttpStatus,
   Param,
   ParseEnumPipe,
   ParseIntPipe,
-  Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { RealTimeDataService } from './real-time-data.service';
 import { IsPublic } from '../common/decorator/is-public.decorator';
 import { LoRaEnum } from '../real-time-data/const/lora-enum.const';
-import { User } from '../users/decorator/user.decorator';
-import { UsersModel } from '../users/entity/users.entity';
-import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
 import { TimeUnitEnum } from './const/time-unit.enum';
 import { RealTimeDataSaveService } from './real-time-data-save.service';
-import { UpdateContDeviceDto } from 'src/controllers/device/dto/update-devices-controller.dto';
 
 @Controller()
 export class RealTimeDataController {
@@ -90,48 +83,6 @@ export class RealTimeDataController {
       startDate,
       endDate,
       timeUnit,
-    );
-  }
-
-  // 알람범위&보정 요청
-  @Get('alarmRangeAndCalibrate/:gatewayId')
-  async getAlarmRangeAndCalibrate(
-    @Param('gatewayId', ParseIntPipe) gatewayId: number,
-  ) {
-    return await this.realtimeService.getAlarmRangeAndCalibrateById(gatewayId);
-  }
-
-  // 알람범위&보정 수정
-  @Patch('alarmRangeAndCalibrate')
-  async postAlarmRangeAndCalibrate(
-    @Body() body: UpdateAlarmRangeAndCalibrateDto[],
-    @User() user: UsersModel,
-  ) {
-    return await this.realtimeService.updateAlarmRangeAndCalibrate(body, user);
-  }
-
-  // 제어기에 매핑되는 센서 리스트
-  @Get('sensorList/:controllerId')
-  async getSensorMappingList(
-    @Param('controllerId', ParseIntPipe) controllerId: number,
-  ) {
-    return await this.realtimeService.getSensorListByControllerId(controllerId);
-  }
-
-  @Post('sensorList/:controllerId')
-  async postSensorMappingList(
-    @Param('controllerId') controllerId: number,
-    @Body() body: UpdateContDeviceDto,
-    @User() user: UsersModel,
-  ) {
-    /**
-     * 서비스를 호출하고 서비스에서는 수정된 값 중 센서 또는 manualValue가 변경될 경우 매핑리스트도 같이 변경해야한다.
-     */
-
-    return await this.realtimeService.setSensorFromController(
-      controllerId,
-      body,
-      user,
     );
   }
 }

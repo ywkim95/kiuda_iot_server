@@ -19,12 +19,13 @@ import { UpdateSensorSpecDto } from './dto/update-specifications-sensor.dto';
 import { SensorSpecService } from './specifications-sensor.service';
 
 @Controller('sensors/specifications')
+@Roles(RolesEnum.ADMIN)
 export class SensorSpecController {
   constructor(private readonly specService: SensorSpecService) {}
   // 센서 제원
 
   // -----------------------------------------------------------
-  // 폐기
+  // 자동생성기
   @Get('generates')
   async generateSpecificationSensors(@User() user: UsersModel) {
     await this.specService.generateSpecificationSensor(user);
@@ -35,18 +36,12 @@ export class SensorSpecController {
 
   // 페이지네이션
   @Get()
-  @Roles(RolesEnum.ADMIN)
-  async getSensorSpecifications(
-    @Query() query: SensorSpecPaginateDto,
-    // @User() user: UsersModel,
-  ) {
-    // await this.sensorsService.generateSpecificationSensor(user);
+  async getSensorSpecifications(@Query() query: SensorSpecPaginateDto) {
     return await this.specService.paginateSensorSpecifications(query);
   }
 
-  // 상세
+  // 조회
   @Get(':specificationsId')
-  @Roles(RolesEnum.ADMIN)
   async getSensorSpecification(
     @Param('specificationsId', ParseIntPipe) specificationsId: number,
   ) {
@@ -55,7 +50,6 @@ export class SensorSpecController {
 
   // 등록
   @Post()
-  @Roles(RolesEnum.ADMIN)
   async postSensorSpecification(
     @Body() body: CreateSensorSpecDto,
     @User() user: UsersModel,
@@ -65,7 +59,6 @@ export class SensorSpecController {
 
   // 수정
   @Patch(':specificationsId')
-  @Roles(RolesEnum.ADMIN)
   async patchSensorSpecification(
     @Param('specificationsId', ParseIntPipe) specificationsId: number,
     @Body() body: UpdateSensorSpecDto,

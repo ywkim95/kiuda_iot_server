@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateSensorDeviceDto } from './dto/update-device-sensor.dto';
 import { UsersModel } from '../../users/entity/users.entity';
 import { CreateSensorDeviceDto } from './dto/create-device-sensor.dto';
@@ -38,7 +42,7 @@ export class SensorDeviceService {
     );
   }
 
-  // 상세정보
+  // 조회
   async getDeviceSensorById(id: number) {
     const deviceSensor = await this.deviceSensorRepository.findOne({
       where: {
@@ -111,7 +115,7 @@ export class SensorDeviceService {
     gatewayId: string,
     clientId: string,
   ) {
-    const device = await this.deviceSensorRepository.findOne({
+    const deviceList = await this.deviceSensorRepository.find({
       where: {
         device: {
           gateway: {
@@ -123,10 +127,12 @@ export class SensorDeviceService {
         },
       },
     });
-    if (!device) {
+
+    if (!deviceList || deviceList.length === 0) {
       throw new NotFoundException();
     }
-    return device;
+
+    return deviceList;
   }
 
   // id리스트를 받아서 관련된 컬럼을 검색하는 로직
@@ -138,31 +144,15 @@ export class SensorDeviceService {
     });
 
     if (sensorList.length === 0) {
-      throw new NotFoundException();
+      throw new NotFoundException(
+        '해당하는 센서 디바이스 목록이 존재하지 않습니다.',
+      );
     }
 
     return sensorList;
   }
 
-  // 받은 데이터를 저장하는 로직
-  async saveSensorDevice(updatedData: SensorDeviceModel): Promise<void> {
-    await this.deviceSensorRepository.save(updatedData);
-  }
-
-  async generateDeviceSensors(user: UsersModel) {
-    for (let i = 0; i < 12; i++) {
-      let dto = new CreateSensorDeviceDto();
-      dto.correctionValue = (i + 1) * 10;
-      dto.name = `hello{i}`;
-      dto.customStableStart = 0;
-      dto.customStableEnd = 6000;
-      dto.device = await this.deviceService.getDeviceById(5);
-      dto.spec = await this.specService.getSensorSpecificationById(5);
-      await this.createDeviceSensor(dto, user);
-    }
-  }
-
-  // deviceid와 controllerid를 받아서 관련된 센서리스트를 가져오는 로직
+  // deviceid를 받아서 관련된 센서리스트를 가져오는 로직
   async getSensorListFromDeviceId(
     deviceId: number,
   ): Promise<SensorDeviceModel[]> {
@@ -179,5 +169,69 @@ export class SensorDeviceService {
     }
 
     return list;
+  }
+
+  // 받은 센서디바이스 저장 로직
+  async saveSensorDevice(updatedData: SensorDeviceModel): Promise<void> {
+    await this.deviceSensorRepository.save(updatedData);
+  }
+
+  // 받은 센서디바이스 리스트 저장 로직
+  async saveSensorDeviceList(list: SensorDeviceModel[]) {
+    const sensorReturn = await Promise.all(
+      list.map((device) => this.deviceSensorRepository.save(device)),
+    );
+    if (sensorReturn.length === 0) {
+      throw new BadRequestException(
+        '센서 디바이스 리스트를 저장하는데 실패했습니다. 다시 한 번 리스트를 확인해주세요',
+      );
+    }
+
+    return true;
+  }
+
+  // 센서범위&보정 값 리스트
+  async getSensorDeviceRangeAndCorrectValueListByGatewayId(gatewayId: number) {
+    const sensorDeviceRangeAndCorrectValueList =
+      await this.deviceSensorRepository.find({
+        where: {
+          device: {
+            gateway: {
+              id: gatewayId,
+            },
+          },
+        },
+      });
+    if (
+      !sensorDeviceRangeAndCorrectValueList ||
+      sensorDeviceRangeAndCorrectValueList.length === 0
+    ) {
+      throw new NotFoundException(
+        '해당 게이트웨이에 디바이스 정보가 없습니다.',
+      );
+    }
+    return sensorDeviceRangeAndCorrectValueList;
+  }
+
+  async updateSensorDeviceRangeAndCorrectValueList(list: SensorDeviceModel[]) {
+    const newList = await this.deviceSensorRepository.save(list);
+
+    if (!newList || newList.length === 0) {
+      throw new BadRequestException('잘못된 형식의 리스트를 입력하였습니다.');
+    }
+  }
+
+  // 자동생성기
+  async generateDeviceSensors(user: UsersModel) {
+    for (let i = 0; i < 12; i++) {
+      let dto = new CreateSensorDeviceDto();
+      dto.correctionValue = (i + 1) * 10;
+      dto.name = `hello{i}`;
+      dto.customStableStart = 0;
+      dto.customStableEnd = 6000;
+      dto.device = await this.deviceService.getDeviceById(5);
+      dto.spec = await this.specService.getSensorSpecificationById(5);
+      await this.createDeviceSensor(dto, user);
+    }
   }
 }

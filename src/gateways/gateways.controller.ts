@@ -16,12 +16,16 @@ import { GatewaysPaginationDto } from './dto/paginate-gateway.dto';
 import { User } from 'src/users/decorator/user.decorator';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { CreateGatewayDto } from './dto/create-gateway.dto';
+import { UpdateIdGatewayDto } from './dto/update-id-gateway.dto';
+import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
+import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
+import { UpdateGatewayDto } from './dto/update-gateway.dto';
 
 @Controller('gateways')
 export class GatewaysController {
   constructor(private readonly gatewaysService: GatewaysService) {}
 
-  // --------- 폐기 ---------
+  // --------- 자동생성기 ---------
   @Get('generate')
   async generateGateways(@User() user: UsersModel) {
     return await this.gatewaysService.generateGateways(user);
@@ -55,15 +59,23 @@ export class GatewaysController {
   // 게이트웨이 수정
   @Patch(':gatewayId')
   @Roles(RolesEnum.ADMIN)
-  async patchGateway(@Param('gatewayId', ParseIntPipe) gatewayId: number) {}
+  async patchGateway(
+    @Param('gatewayId', ParseIntPipe) gatewayId: number,
+    @Body() body: UpdateGatewayDto,
+    @User() user: UsersModel,
+  ) {
+    return await this.gatewaysService.updateGatewayById(gatewayId, body, user);
+  }
 
   // 게이트웨이 삭제
   @Delete(':gatewayId')
   @Roles(RolesEnum.ADMIN)
-  async deleteGateway(@Param('gatewayId', ParseIntPipe) gatewayId: number) {}
+  @Roles(RolesEnum.ADMIN)
+  async deleteGateway(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
+    return await this.gatewaysService.deleteGatewayById(gatewayId);
+  }
 
   // -----------------------------------------------------------
-  // 사용자
 
   // 게이트웨이 단위 리셋
   @Get(':gatewayId/reset')
@@ -71,14 +83,36 @@ export class GatewaysController {
     return this.gatewaysService.gatewayReset(gatewayId);
   }
 
-  // 사용유무 변경
-  @Post(':gatewayId/useYn')
-  postUseYn(
+  // 게이트웨이 변경
+  @Patch(':gatewayId/id')
+  @Roles(RolesEnum.ADMIN)
+  async postGatewayId(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
-    @Body() body: { useYn: boolean },
+    @Body() body: UpdateIdGatewayDto,
     @User() user: UsersModel,
   ) {
-    return this.gatewaysService.setGatewayUseYn(gatewayId, body.useYn, user);
+    return await this.gatewaysService.updateGatewayId(gatewayId, body, user);
   }
-  // -----------------------------------------------------------
+
+  // SSID 변경
+  @Patch(':gatewayId/ssid')
+  @Roles(RolesEnum.ADMIN)
+  async postSsid(
+    @Param('gatewayId', ParseIntPipe) gatewayId: number,
+    @Body() body: UpdateSsidGatewayDto,
+    @User() user: UsersModel,
+  ) {
+    return await this.gatewaysService.updateSsid(gatewayId, body, user);
+  }
+
+  // 주파수변경
+  @Patch(':gatewayId/frequency')
+  @Roles(RolesEnum.ADMIN)
+  async postFrequency(
+    @Param('gatewayId', ParseIntPipe) gatewayId: number,
+    @Body() body: UpdateFrequencyGatewayDto,
+    @User() user: UsersModel,
+  ) {
+    return await this.gatewaysService.updateFrequency(gatewayId, body, user);
+  }
 }

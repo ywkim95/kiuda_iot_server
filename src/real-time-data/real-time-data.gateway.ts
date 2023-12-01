@@ -1,4 +1,4 @@
-import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Logger, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -15,6 +15,7 @@ import { SocketCatchHttpExceptionFilter } from 'src/common/exception-filter/sock
 import { UsersModel } from 'src/users/entity/users.entity';
 import { UsersService } from 'src/users/users.service';
 import { RealTimeDataService } from './real-time-data.service';
+import { CustomValidationPipe } from './decorator/validation-pipe.decorator';
 
 @WebSocketGateway({
   namespace: 'real-time',
@@ -22,6 +23,7 @@ import { RealTimeDataService } from './real-time-data.service';
 export class RealTimeDataGateway
   implements OnGatewayConnection, OnGatewayInit, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(RealTimeDataGateway.name);
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
@@ -37,14 +39,18 @@ export class RealTimeDataGateway
     console.log('after gateway init');
   }
 
-  handleDisconnect(socket: Socket) {
-    console.log(`on disconnnect called: ${socket.id}`);
-    this.stopSendingData(socket);
+  private leaveAllRoomsExceptCurrent(socket: Socket) {
     for (const room of Array.from(socket.rooms)) {
       if (room !== socket.id) {
         socket.leave(room);
       }
     }
+  }
+
+  handleDisconnect(socket: Socket) {
+    console.log(`on disconnnect called: ${socket.id}`);
+    this.stopSendingData(socket);
+    this.leaveAllRoomsExceptCurrent(socket);
   }
 
   async handleConnection(socket: Socket & { user: UsersModel }) {
@@ -68,20 +74,43 @@ export class RealTimeDataGateway
 
       return true;
     } catch (e) {
+      this.logger.error(e);
       socket.disconnect();
     }
   }
 
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  )
+  // 데이터 전송 시작
+  private startSendingData(roomId: string, socket: Socket) {
+    // const interval = setInterval(async () => {
+    //   const dataList = await this.realtimeService.fetchRealTimedata(roomId);
+    //   this.server.to(roomId).emit('receive_data', dataList);
+    // }, 1000 * 10); // 예시: 10초마다 데이터 전송
+
+    // this.intervalMap.set(socket.id, interval);
+    const sendData = async () => {
+      const dataList = await this.realtimeService.fetchRealTimedata(roomId);
+      this.server.to(roomId).emit('receive_data', dataList);
+
+      // 다음 전송 예약
+      const interval = setTimeout(sendData, 1000 * 10); // 10초 후 다시 호출
+      this.intervalMap.set(socket.id, interval);
+    };
+
+    sendData();
+  }
+
+  // 데이터 전송 중지
+  private stopSendingData(socket: Socket) {
+    let interval = this.intervalMap.get(socket.id);
+
+    if (interval) {
+      clearInterval(interval);
+      this.intervalMap.delete(socket.id);
+    }
+  }
+
+  // --------------------------------------------------------------------
+  @UsePipes(CustomValidationPipe)
   @UseFilters(SocketCatchHttpExceptionFilter)
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
@@ -91,26 +120,12 @@ export class RealTimeDataGateway
     // 로직 흐름 룸 아이디를 받아서 현재 기기에서
     const { roomId } = data;
 
-    for (const room of Array.from(socket.rooms)) {
-      if (room != socket.id) {
-        socket.leave(room);
-      }
-    }
-    console.log(roomId);
+    this.leaveAllRoomsExceptCurrent(socket);
     socket.join(roomId);
     this.startSendingData(roomId, socket);
   }
 
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  )
+  @UsePipes(CustomValidationPipe)
   @UseFilters(SocketCatchHttpExceptionFilter)
   @SubscribeMessage('leaveRoom')
   handleLeaveRoom(
@@ -122,20 +137,17 @@ export class RealTimeDataGateway
     this.stopSendingData(socket);
   }
 
-  // @SubscribeMessage('send_message')
-  // sendMessage(
-  //   @MessageBody() message: { message: string; gatewayId: string },
-  //   @ConnectedSocket() socket: Socket & { user: UsersModel },
-  // ) {
-  //   console.log(message);
-  //   this.server.in(message.gatewayId).emit('receive_message', message.message);
-  // }
-
+  // 데이터 전송 일시중지
+  @UsePipes(CustomValidationPipe)
+  @UseFilters(SocketCatchHttpExceptionFilter)
   @SubscribeMessage('pauseSendingData')
   handlePauseSendingData(@ConnectedSocket() socket: Socket) {
     this.stopSendingData(socket);
   }
 
+  // 데이터 전송 재개
+  @UsePipes(CustomValidationPipe)
+  @UseFilters(SocketCatchHttpExceptionFilter)
   @SubscribeMessage('resumeSendingData')
   handleResumeSendingData(
     @ConnectedSocket() socket: Socket,
@@ -143,25 +155,5 @@ export class RealTimeDataGateway
   ) {
     const { roomId } = data;
     this.startSendingData(roomId, socket);
-  }
-
-  // 데이터 전송 시작
-  private startSendingData(roomId: string, socket: Socket) {
-    const interval = setInterval(async () => {
-      const dataList = await this.realtimeService.fetchRealTimedata(roomId);
-      this.server.to(roomId).emit('receive_data', dataList);
-    }, 1000 * 10); // 예시: 10초마다 데이터 전송
-
-    this.intervalMap.set(socket.id, interval);
-  }
-
-  // 데이터 전송 중지
-  private stopSendingData(socket: Socket) {
-    let interval = this.intervalMap.get(socket.id);
-
-    if (interval) {
-      clearInterval(interval);
-      this.intervalMap.delete(socket.id);
-    }
   }
 }

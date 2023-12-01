@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseModel } from './base.entity';
+import { IsOptional } from 'class-validator';
 /**
  * common
  *
@@ -14,10 +15,15 @@ export abstract class BaseWithUpdateModel extends BaseModel {
   id: number;
 
   @Column({
+    comment: '수정 일자',
     default: new Date(),
   })
   updatedAt: Date;
 
-  @Column()
-  updatedBy: string;
+  @Column({
+    nullable: true,
+    comment: '수정한 사용자',
+  })
+  @IsOptional()
+  updatedBy?: string;
 }

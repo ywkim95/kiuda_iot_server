@@ -29,7 +29,7 @@ export class SensorSpecService {
     );
   }
 
-  // 상세정보
+  // 조회
   async getSensorSpecificationById(id: number) {
     const spec = await this.sensorSpecificationsRepository.findOne({
       where: {

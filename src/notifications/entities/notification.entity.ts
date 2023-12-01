@@ -1,1 +1,41 @@
-export class Notification {}
+import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
+import { BaseModel } from 'src/common/entity/base.entity';
+import { DevicesModel } from 'src/devices/entities/device.entity';
+import { UsersModel } from 'src/users/entity/users.entity';
+import { Column, ManyToOne } from 'typeorm';
+
+export class NotificationModel extends BaseModel {
+  @Column({ comment: '확인 여부', default: false })
+  @IsBoolean()
+  checkFlag: boolean;
+
+  @Column({ nullable: true, comment: '확인 날짜' })
+  @IsDate()
+  @IsOptional()
+  checkDate?: Date;
+
+  @Column({ comment: '삭제 여부', default: false })
+  @IsBoolean()
+  deleteFlag: boolean;
+
+  @Column({ nullable: true, comment: '삭제 날짜' })
+  @IsDate()
+  @IsOptional()
+  deleteDate?: Date;
+
+  @Column()
+  @IsString()
+  title: string;
+
+  @Column({ comment: '내용' })
+  @IsString()
+  message: string;
+
+  // 발생한 디바이스
+  @ManyToOne(() => DevicesModel)
+  device: DevicesModel;
+
+  // 유저 정보
+  @ManyToOne(() => UsersModel)
+  user: UsersModel;
+}

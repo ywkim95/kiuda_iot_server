@@ -18,7 +18,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { GatewaysModule } from 'src/gateways/gateways.module';
 import { RealTimeDataSaveService } from './real-time-data-save.service';
-import { ContMapModule } from 'src/controllers/mappings/mappings-controller.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -38,7 +38,7 @@ import { ContMapModule } from 'src/controllers/mappings/mappings-controller.modu
     AuthModule,
     UsersModule,
     GatewaysModule,
-    ContMapModule,
+    NotificationsModule,
   ],
   exports: [RealTimeDataService, RealTimeDataSaveService, RealTimeDataGateway],
   controllers: [RealTimeDataController],

@@ -121,6 +121,7 @@ export class RealTimeDataSaveService {
     // averageModels를 저장하는 로직 필요
     await this.saveAverageModels(averageModels, this.fiveAverageRepository);
   }
+
   // 하루마다 누적데이터 저장로직
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async saveDataDaily() {

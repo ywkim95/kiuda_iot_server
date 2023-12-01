@@ -75,6 +75,9 @@ export class UsersService {
     return await this.usersRepository.find();
   }
 
+  // --- firebase ---
+  saveUserToken() {}
+
   /**
    * 1. email을 기준으로 계정정보를 가져온다.
    * 2. 외부에서 받아온 값으로 계정정보를 대체한다.

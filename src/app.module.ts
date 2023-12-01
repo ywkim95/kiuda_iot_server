@@ -1,4 +1,10 @@
-import { ClassSerializerInterceptor, Module } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -36,14 +42,18 @@ import { MonthlyAverageModel } from './real-time-data/entities/average/monthly-a
 import { ContDeviceModel } from './controllers/device/entities/devices-controller.entity';
 import { ContSpecModel } from './controllers/specifications/entities/specifications-controller.entity';
 import { ContSpecStepModel } from './controllers/specifications/entities/specifications-step.entity';
-import { ContMapModel } from './controllers/mappings/entities/mappings-controller.entity';
 import { ContDeviceModule } from './controllers/device/device-controller.module';
 import { ContSpecModule } from './controllers/specifications/specifications-controller.module';
-import { ContMapModule } from './controllers/mappings/mappings-controller.module';
 import { RealTimeDataModule } from './real-time-data/real-time-data.module';
 import { SensorSpecModule } from './sensors/specifications/specifications-sensor.module';
 import { SensorDeviceModule } from './sensors/device/device-sensor.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FirebaseAdminModule } from './firebase-admin/firebase-admin.module';
+import { FirebaseModel } from './firebase-admin/entities/firebase.entity';
+import { LogMiddleware } from './common/middleware/log.middleware';
+import { CustomSettingRangeModel } from './controllers/device/entities/custom-setting-range.entity';
+import { UserCustomValueModel } from './controllers/device/entities/user-custom-value.entity';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -54,7 +64,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     SensorDeviceModule,
     ContDeviceModule,
     ContSpecModule,
-    ContMapModule,
     NotificationsModule,
     AuthModule,
     ConfigModule.forRoot({
@@ -87,13 +96,17 @@ import { ScheduleModule } from '@nestjs/schedule';
         ContSpecStepModel,
         ContSpecModel,
         ContDeviceModel,
-        ContMapModel,
+        FirebaseModel,
+        CustomSettingRangeModel,
+        UserCustomValueModel,
       ],
       synchronize: true,
     }),
     GatewaysModule,
     DevicesModule,
     ScheduleModule.forRoot(),
+    FirebaseAdminModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -112,4 +125,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LogMiddleware).forRoutes({
+      path: '*',
+      method: RequestMethod.ALL,
+    });
+  }
+}
