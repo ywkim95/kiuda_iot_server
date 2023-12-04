@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -13,12 +14,18 @@ import { SensorDeviceModel } from '../sensors/device/entities/device-sensor.enti
 import { splitString } from './const/splitString.const';
 import { DeviceEnum } from '../devices/const/deviceEnum.const';
 import { DevicesService } from '../devices/devices.service';
-import { UpdateAlarmRangeAndCalibrateDto } from './dto/update-alarm-range-and-calibrate.dto';
 import { UsersModel } from '../users/entity/users.entity';
 import { SensorDeviceService } from '../sensors/device/device-sensor.service';
-import { FiveMinutesAverageModel } from './entities/average/five-minutes-average.entity';
-import { NotificationsService } from 'src/notifications/notifications.service';
-import { WarningEnum, sentence } from 'src/notifications/const/sentence.const';
+import { NotificationsService } from '../notifications/notifications.service';
+import { WarningEnum, sentence } from '../notifications/const/sentence.const';
+import { AccumulatedIrradianceModel } from './entities/accumulate/accumulated-irradiance.entity';
+
+type Data = {
+  ghid: string;
+  glid: string;
+  gid: string;
+  cid: string;
+};
 
 @Injectable()
 export class RealTimeDataService {
@@ -27,11 +34,39 @@ export class RealTimeDataService {
     private readonly realtimeSensorsRepository: Repository<SensorRealTimeDataModel>,
     @InjectRepository(ContRealTimeDataModel)
     private readonly realtimeControllersRepository: Repository<ContRealTimeDataModel>,
-    @InjectRepository(FiveMinutesAverageModel)
+    @InjectRepository(AccumulatedIrradianceModel)
+    private readonly accumulatedIrradianceRepository: Repository<AccumulatedIrradianceModel>,
     private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
     private readonly notiService: NotificationsService,
   ) {}
+
+  // 클라이언트 연결(디바이스 연결)
+
+  async joinDevice(dto: any) {
+    try {
+      const deviceList = await this.devicesService.findDeviceList(
+        dto.ghid,
+        dto.glid,
+        dto.gid,
+      );
+
+      if (!deviceList || deviceList.length === 0) {
+        throw new NotFoundException();
+      }
+
+      const data = {
+        ghid: dto.ghid,
+        glid: dto.glid,
+        gid: dto.gid,
+      };
+
+      return `SV+ULD:${data.ghid},${data.glid},${data.gid},OK`;
+    } catch (error) {
+      console.error(error);
+      throw new NotFoundException();
+    }
+  }
 
   // 데이터 받기/분기
   async receiveData(dto: any) {
@@ -41,7 +76,9 @@ export class RealTimeDataService {
      */
     const isSensor = parseInt(dto['cid'].toString()) % 2 === 0;
 
-    await this.branchData(dto, isSensor);
+    const data = await this.branchData(dto, isSensor);
+
+    return `SV+ULD:${data.ghid},${data.glid},${data.gid},OK`;
   }
   //-------------------------------------------------------------------------
   // 검증/변환
@@ -50,7 +87,7 @@ export class RealTimeDataService {
      * 검증이나 변환 과정인데 결국에는
      * saveData로 던진다.
      */
-    let data: SensorRealTimeDataModel | ContRealTimeDataModel;
+    let data: Data;
 
     if (isSensor) {
       data = await this.saveSensorData(dto);
@@ -61,7 +98,7 @@ export class RealTimeDataService {
       throw new NotFoundException();
     }
 
-    return true;
+    return data;
   }
 
   // 센서 데이터 저장 및 유효성 검사
@@ -79,9 +116,18 @@ export class RealTimeDataService {
       await this.validateAndNotify(sensorDeviceList, dto, user);
 
       const data = this.realtimeSensorsRepository.create({ ...dto, device });
-      const newData = await this.realtimeSensorsRepository.save(data);
+      await this.realtimeSensorsRepository.save(data);
 
-      return newData;
+      await this.saveAccumulateData(dto.s5, device.id);
+
+      const returnData: Data = {
+        ghid: dto.ghid,
+        glid: dto.glid,
+        gid: dto.gid,
+        cid: dto.cid,
+      };
+
+      return returnData;
     } catch (error) {
       // 에러 처리 로직
       throw new ConflictException();
@@ -148,9 +194,59 @@ export class RealTimeDataService {
       device: device,
     });
 
-    const newData = await this.realtimeControllersRepository.save(data);
+    await this.realtimeControllersRepository.save(data);
 
-    return newData;
+    const returnData: Data = {
+      ghid: dto.ghid,
+      glid: dto.glid,
+      gid: dto.gid,
+      cid: dto.cid,
+    };
+
+    return returnData;
+  }
+
+  // 누적일사량 저장
+  async saveAccumulateData(onceIrradiance: number, deviceId: number) {
+    const today = new Date().toISOString().split('T')[0];
+
+    let currentIrradiance = await this.accumulatedIrradianceRepository.findOne({
+      where: {
+        deviceId,
+        date: today,
+      },
+    });
+
+    if (!currentIrradiance) {
+      currentIrradiance = this.accumulatedIrradianceRepository.create({
+        date: today,
+        deviceId,
+        dataCount: 0,
+      });
+    }
+
+    currentIrradiance.dataCount += 1;
+    currentIrradiance.accumulatedIrradiance += onceIrradiance;
+
+    await this.accumulatedIrradianceRepository.save(currentIrradiance);
+  }
+
+  // 누적일사량 가져오기
+  async getAccumulateData(deviceId: number) {
+    const today = new Date().toISOString().split('T')[0];
+
+    const irradiance = await this.accumulatedIrradianceRepository.findOne({
+      where: {
+        deviceId,
+        date: today,
+      },
+    });
+
+    if (!irradiance) {
+      throw new BadRequestException('올바른 아이디를 입력해주세요.');
+    }
+
+    return irradiance;
   }
 
   //-------------------------------------------------------------------------
@@ -208,76 +304,5 @@ export class RealTimeDataService {
         device: true,
       },
     });
-  }
-
-  //-------------------------------------------------------------------------
-
-  async getAlarmRangeAndCalibrateById(gatewayId: number) {
-    const deviceList =
-      await this.devicesService.findDeviceListforSensors(gatewayId);
-
-    return deviceList;
-  }
-
-  async updateAlarmRangeAndCalibrate(
-    dtoList: UpdateAlarmRangeAndCalibrateDto[],
-    user: UsersModel,
-  ) {
-    // currentSensorIdList
-    // number[]
-    const sensorIds = dtoList.flatMap((dto) =>
-      dto.sensors.map((sensor) => sensor.id),
-    );
-    // Map<id, model>
-    const sensorsMap = await this.fetchSensorsMap(sensorIds);
-
-    // void[]
-    const updatePromises = dtoList.flatMap((dto) =>
-      dto.sensors
-        .filter((sensor) => this.isSensorUpdated(sensorsMap, sensor))
-        .map((sensor) =>
-          this.updateSensor(sensorsMap[sensor.id], sensor, user.email),
-        ),
-    );
-
-    await Promise.all(updatePromises);
-
-    return true;
-  }
-
-  async fetchSensorsMap(sensorIds: number[]) {
-    const sensors =
-      await this.sensorDeviceService.getSensorDeviceListFromRealTime(sensorIds);
-
-    return new Map(sensors.map((sensor) => [sensor.id, sensor]));
-  }
-
-  isSensorUpdated(
-    sensorsMap: Map<number, SensorDeviceModel>,
-    sensorDto: SensorDeviceModel,
-  ): boolean {
-    const currentSensor: SensorDeviceModel = sensorsMap[sensorDto.id];
-    const isCorrectionValueUpdated =
-      currentSensor.correctionValue !== sensorDto.correctionValue;
-    const isCustomStableStart =
-      currentSensor.customStableStart !== sensorDto.customStableStart;
-    const isCustomStableEnd =
-      currentSensor.customStableEnd !== sensorDto.customStableEnd;
-
-    return isCorrectionValueUpdated || isCustomStableStart || isCustomStableEnd;
-  }
-
-  async updateSensor(
-    currentSensor: SensorDeviceModel,
-    newSensorData: SensorDeviceModel,
-    updatedBy: string,
-  ): Promise<void> {
-    const updatedSensor: SensorDeviceModel = {
-      ...currentSensor,
-      ...newSensorData,
-      updatedBy,
-      updatedAt: new Date(),
-    };
-    await this.sensorDeviceService.saveSensorDevice(updatedSensor);
   }
 }

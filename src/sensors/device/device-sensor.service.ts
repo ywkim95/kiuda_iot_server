@@ -14,12 +14,15 @@ import { DevicesService } from '../../devices/devices.service';
 import { SensorSpecService } from '../specifications/specifications-sensor.service';
 import { CommonService } from '../../common/common.service';
 import { isEqual } from 'lodash';
+import { SensorDeviceLogModel } from './entities/device-sensor-log.entity';
 
 @Injectable()
 export class SensorDeviceService {
   constructor(
     @InjectRepository(SensorDeviceModel)
     private readonly deviceSensorRepository: Repository<SensorDeviceModel>,
+    @InjectRepository(SensorDeviceLogModel)
+    private readonly deviceSensorLogRepository: Repository<SensorDeviceLogModel>,
     private readonly deviceService: DevicesService,
     private readonly specService: SensorSpecService,
     private readonly commonService: CommonService,
@@ -92,20 +95,54 @@ export class SensorDeviceService {
     if (isEqual(deviceSensor, comparisonData)) {
       return deviceSensor;
     }
+
     const newDeviceSensor = {
       ...comparisonData,
       updatedBy: user.email,
       updatedAt: new Date(),
     };
 
+    const deviceSensorLog = this.createDeviceSensorLogModel(
+      deviceSensor,
+      user.email,
+    );
+
+    await this.deviceSensorLogRepository.save(deviceSensorLog);
+
     return await this.deviceSensorRepository.save(newDeviceSensor);
   }
 
   // 삭제
-  async deleteDeviceSensorById(id: number) {
-    await this.getDeviceSensorById(id);
+  async deleteDeviceSensorById(id: number, user: UsersModel) {
+    const deviceSensor = await this.getDeviceSensorById(id);
+
+    const deviceSensorLog = this.createDeviceSensorLogModel(
+      deviceSensor,
+      user.email,
+    );
+
+    await this.deviceSensorLogRepository.save(deviceSensorLog);
 
     return await this.deviceSensorRepository.delete(id);
+  }
+
+  // ------------------------------------------------------------------
+
+  // 로그 모델 생성 로직
+  createDeviceSensorLogModel(
+    deviceSensor: SensorDeviceModel,
+    userEmail: string,
+  ) {
+    return this.deviceSensorLogRepository.create({
+      correctionValue: deviceSensor.correctionValue,
+      customStableEnd: deviceSensor.customStableEnd,
+      customStableStart: deviceSensor.customStableStart,
+      device: deviceSensor.device,
+      modelId: deviceSensor.id,
+      name: deviceSensor.name,
+      recordedBy: userEmail,
+      spec: deviceSensor.spec,
+    });
   }
 
   // 국가, 지역, 게이트웨이, 클라이언트 아이디 4개의 값을 받아서 검색하는 로직
@@ -213,12 +250,17 @@ export class SensorDeviceService {
     return sensorDeviceRangeAndCorrectValueList;
   }
 
-  async updateSensorDeviceRangeAndCorrectValueList(list: SensorDeviceModel[]) {
-    const newList = await this.deviceSensorRepository.save(list);
-
-    if (!newList || newList.length === 0) {
-      throw new BadRequestException('잘못된 형식의 리스트를 입력하였습니다.');
-    }
+  // 센서범위&보정 값 리스트 업데이트
+  async updateSensorDeviceRangeAndCorrectValueList(
+    list: SensorDeviceModel[],
+    user: UsersModel,
+  ) {
+    await Promise.all(
+      list.map((model) => {
+        const updateSensorDevice: UpdateSensorDeviceDto = { ...model };
+        return this.updateDeviceSensorById(model.id, updateSensorDevice, user);
+      }),
+    );
   }
 
   // 자동생성기

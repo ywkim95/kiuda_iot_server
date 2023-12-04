@@ -59,6 +59,8 @@ import { CustomSettingRangeLogModel } from './controllers/device/entities/custom
 import { UserCustomValueLogModel } from './controllers/device/entities/user-custom-value-log.entity';
 import { DevicesLogModel } from './devices/entities/device-log.entity';
 import { GatewaysLogModel } from './gateways/entities/gateway-log.entity';
+import { SensorDeviceLogModel } from './sensors/device/entities/device-sensor-log.entity';
+import { SensorSpecLogModel } from './sensors/specifications/entities/specifications-sensor-log.entity';
 
 @Module({
   imports: [
@@ -89,8 +91,10 @@ import { GatewaysLogModel } from './gateways/entities/gateway-log.entity';
         GatewaysModel,
         GatewaysLogModel,
         SensorSpecModel,
+        SensorSpecLogModel,
         SensorRealTimeDataModel,
         SensorDeviceModel,
+        SensorDeviceLogModel,
         DevicesModel,
         DevicesLogModel,
         AccumulatedIrradianceModel,

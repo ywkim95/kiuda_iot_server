@@ -28,6 +28,11 @@ export class RealTimeDataSaveService {
     private readonly devicesService: DevicesService,
   ) {}
 
+  /**
+   * 테이블과 그래프를 불러오기위한 누적데이터 저장이 필요함
+   *
+   */
+
   // 테이블과 그래프
 
   async getTableAndGraph(
@@ -35,7 +40,9 @@ export class RealTimeDataSaveService {
     startDate: string,
     endDate: string,
     unit: TimeUnitEnum,
-  ) {
+  ): Promise<
+    FiveMinutesAverageModel[] | DailyAverageModel[] | MonthlyAverageModel[]
+  > {
     /**
      * 이건 누적 테이블을 만들어서 데이터를 보내줘야겠다.
      *
@@ -125,6 +132,14 @@ export class RealTimeDataSaveService {
   // 하루마다 누적데이터 저장로직
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async saveDataDaily() {
+    /**
+     * 1. 모든 iot센서들의 id를 가져와 id리스트를 만든다.
+     * 2. id리스트를 기준으로 id별로 각각의 항목(s1~s20)의 하루동안의 데이터를 합치고 평균을 낸다.
+     * 3. 모든 id리스트의 합치기 계산이 끝나면 하루 데이터의 수를 더해서 평균값과 함께 모델에 넣는다.
+     * 4. 물론 하루 데이터 중 가장 첫번째 데이터의 저장일자와 마지막 저장일자를 측정 시작 시간, 측정 종료 시간에 넣는다.
+     * 5. 각각의 평균데이터리스트들은 자신에 해당하는 device의 정보를 알기위해서 device의 id를 가지고있는다.
+     */
+
     const sensorIds = await this.devicesService.getAllDeviceSensorIds();
 
     const averageModels = await Promise.all(
@@ -138,6 +153,14 @@ export class RealTimeDataSaveService {
   // 한달마다 누적데이터 저장로직
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async saveDataMonthly() {
+    /**
+     * 1. 모든 iot센서들의 id를 가져와 id리스트를 만든다.
+     * 2. id리스트를 기준으로 id별로 각각의 항목(s1~s20)의 한달동안의 데이터를 합치고 평균을 낸다.
+     * 3. 모든 id리스트의 합치기 계산이 끝나면 한달 데이터의 수를 더해서 평균값과 함께 모델에 넣는다.
+     * 4. 물론 한달 데이터 중 가장 첫번째 데이터의 저장일자와 마지막 저장일자를 측정 시작 시간, 측정 종료 시간에 넣는다.
+     * 5. 각각의 평균데이터리스트들은 자신에 해당하는 device의 정보를 알기위해서 device의 id를 가지고있는다.
+     */
+
     const sensorIds = await this.devicesService.getAllDeviceSensorIds();
 
     const averageModels = await Promise.all(
@@ -148,6 +171,7 @@ export class RealTimeDataSaveService {
     await this.saveAverageModels(averageModels, this.monthlyAverageRepository);
   }
 
+  // 평균데이터 모델생성
   createAverageModel<T extends AbstractAverageModel>(type: TimeUnitEnum): T {
     switch (type) {
       case TimeUnitEnum.MINUTE:
@@ -161,6 +185,7 @@ export class RealTimeDataSaveService {
     }
   }
 
+  // 모델 별 최소, 최대, 평균, 데이터 수 계산
   async processSensorData<T extends AbstractAverageModel>(
     sensorId: number,
     times: TimeUnitEnum,
@@ -199,6 +224,7 @@ export class RealTimeDataSaveService {
     return averageModel;
   }
 
+  // 실시간 센서 데이터 가져오기
   private async getSensorData(
     sensorId: number,
   ): Promise<SensorRealTimeDataModel[]> {
@@ -215,6 +241,8 @@ export class RealTimeDataSaveService {
       },
     });
   }
+
+  // 평균데이터 저장
   private async saveAverageModels<T extends AbstractAverageModel>(
     averageModels: T[],
     repository: Repository<T>,

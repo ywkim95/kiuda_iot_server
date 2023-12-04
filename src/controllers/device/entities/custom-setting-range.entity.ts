@@ -1,5 +1,5 @@
 import { IsNumber } from 'class-validator';
-import { BaseWithUpdateModel } from 'src/common/entity/base-with-update.entity';
+import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ContDeviceModel } from './devices-controller.entity';
 

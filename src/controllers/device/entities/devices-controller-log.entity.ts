@@ -6,7 +6,7 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity()
 export class ContDeviceLogModel extends BaseLogModel {
-  @ManyToOne(() => DevicesModel, (device) => device.controllers)
+  @ManyToOne(() => DevicesModel)
   @JoinColumn()
   device: DevicesModel;
 

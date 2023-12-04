@@ -6,6 +6,9 @@ import { DevicesModel } from '../devices/entities/device.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ContRealTimeDataModel } from './entities/real-time/real-time-controller.entity';
 import { RealTimeDataSaveService } from './real-time-data-save.service';
+import { TimeUnitEnum } from './const/time-unit.enum';
+import { DailyAverageModel } from './entities/average/daily-average.entity';
+import { MonthlyAverageModel } from './entities/average/monthly-average.entity';
 
 describe('RealTimeDataSaveService', () => {
   let service: RealTimeDataSaveService;
@@ -225,6 +228,14 @@ describe('RealTimeDataSaveService', () => {
     save: mockSaveFunction,
   };
 
+  const mockDailyAverageRepository = {
+    save: mockSaveFunction,
+  };
+
+  const mockMonthlyAverageRepository = {
+    save: mockSaveFunction,
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -237,6 +248,14 @@ describe('RealTimeDataSaveService', () => {
         {
           provide: getRepositoryToken(FiveMinutesAverageModel),
           useValue: mockFiveAverageRepository,
+        },
+        {
+          provide: getRepositoryToken(DailyAverageModel),
+          useValue: mockDailyAverageRepository,
+        },
+        {
+          provide: getRepositoryToken(MonthlyAverageModel),
+          useValue: mockMonthlyAverageRepository,
         },
         {
           provide: getRepositoryToken(ContRealTimeDataModel),
@@ -255,7 +274,10 @@ describe('RealTimeDataSaveService', () => {
   describe('processSensorData', () => {
     it('should correctly process sensor data', async () => {
       const sensorId = 2;
-      const result = await service.processSensorData(sensorId);
+      const result = await service.processSensorData(
+        sensorId,
+        TimeUnitEnum.MINUTE,
+      );
 
       expect(result).toBeInstanceOf(FiveMinutesAverageModel);
       // expect(result.device.id).toEqual(sensorId);

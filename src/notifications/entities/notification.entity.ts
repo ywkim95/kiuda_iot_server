@@ -1,7 +1,7 @@
 import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
-import { BaseModel } from 'src/common/entity/base.entity';
-import { DevicesModel } from 'src/devices/entities/device.entity';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { BaseModel } from '../../common/entity/base.entity';
+import { DevicesModel } from '../../devices/entities/device.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import { Column, ManyToOne } from 'typeorm';
 
 export class NotificationModel extends BaseModel {

@@ -6,6 +6,11 @@ import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
 import { Setting } from './type/setting.type';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { isEqual } from 'lodash';
+import { ContDeviceModel } from 'src/controllers/device/entities/devices-controller.entity';
+import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
+import { DevicesModel } from 'src/devices/entities/device.entity';
+
+type modelList = ContDeviceModel[] | SensorDeviceModel[] | DevicesModel[];
 
 @Injectable()
 export class SettingsService {
@@ -49,6 +54,7 @@ export class SettingsService {
       await this.devicesService.getSensorAndControllerDeviceUseYnListByGatewayId(
         gatewayId,
       );
+
     const setting: Setting = {
       controllerList: contDeviceAndUserCustomValueList,
       sensorList: sensorDeviceRangeAndCorrectValueList,
@@ -72,43 +78,18 @@ export class SettingsService {
       throw new BadRequestException('잘못된 형식의 세팅값을 보냈습니다.');
     }
 
-    const updateList = (currentList: any[], newList: any[]) =>
-      currentList.map((model, index) => {
-        const newItem = newList[index];
-        const comparisonData = { ...model, ...newItem };
-
-        if (isEqual(model, comparisonData)) {
-          return model;
-        }
-
-        comparisonData.updatedAt = new Date();
-        comparisonData.updatedBy = user.email;
-
-        return comparisonData;
-      });
-
-    const newControllerList = updateList(
-      currentSetting.controllerList,
-      setting.controllerList,
-    );
-    const newSensorList = updateList(
-      currentSetting.sensorList,
-      setting.sensorList,
-    );
-    const newUseYnList = updateList(
-      currentSetting.useYnList,
-      setting.useYnList,
-    );
-
     await Promise.all([
       this.contDeviceService.updateContDeviceAndUserCustomValueList(
-        newControllerList,
+        setting.controllerList,
+        user,
       ),
       this.sensorDeviceService.updateSensorDeviceRangeAndCorrectValueList(
-        newSensorList,
+        setting.sensorList,
+        user,
       ),
       this.devicesService.updateSensorAndControllerDeviceUseYnList(
-        newUseYnList,
+        setting.useYnList,
+        user,
       ),
     ]);
 

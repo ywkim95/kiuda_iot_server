@@ -5,10 +5,10 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { BaseLogModel } from 'src/common/entity/base-log.entity';
+import { BaseLogModel } from '../../common/entity/base-log.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { DeviceEnum } from '../const/deviceEnum.const';
-import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
+import { GatewaysModel } from '../../gateways/entities/gateway.entity';
 
 @Entity()
 export class DevicesLogModel extends BaseLogModel {

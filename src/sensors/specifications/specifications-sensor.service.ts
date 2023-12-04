@@ -8,12 +8,15 @@ import { CreateSensorSpecDto } from './dto/create-specifications-sensor.dto';
 import { UsersModel } from '../../users/entity/users.entity';
 import { UpdateSensorSpecDto } from './dto/update-specifications-sensor.dto';
 import { isEqual } from 'lodash';
+import { SensorSpecLogModel } from './entities/specifications-sensor-log.entity';
 
 @Injectable()
 export class SensorSpecService {
   constructor(
     @InjectRepository(SensorSpecModel)
     private readonly sensorSpecificationsRepository: Repository<SensorSpecModel>,
+    @InjectRepository(SensorSpecLogModel)
+    private readonly sensorSpecificationLogRepository: Repository<SensorSpecLogModel>,
     private readonly commonService: CommonService,
   ) {}
 
@@ -81,14 +84,51 @@ export class SensorSpecService {
       updatedAt: new Date(),
     };
 
+    const specLog = this.createSensorSpecLogModel(spec, user.email);
+
+    await this.sensorSpecificationLogRepository.save(specLog);
+
     return await this.sensorSpecificationsRepository.save(newSpec);
   }
 
   // 삭제
-  async deleteSpecificationById(id: number) {
-    await this.getSensorSpecificationById(id);
+  async deleteSpecificationById(id: number, user: UsersModel) {
+    const spec = await this.getSensorSpecificationById(id);
+
+    const specLog = this.createSensorSpecLogModel(spec, user.email);
+
+    await this.sensorSpecificationLogRepository.save(specLog);
 
     return await this.sensorSpecificationsRepository.delete(id);
+  }
+
+  // ------------------------------------------------------------------
+
+  // 로그 모델 생성 로직
+  createSensorSpecLogModel(sensorSpec: SensorSpecModel, userEamil: string) {
+    return this.sensorSpecificationLogRepository.create({
+      name: sensorSpec.name,
+      varName: sensorSpec.varName,
+      stableStart: sensorSpec.stableStart,
+      stableEnd: sensorSpec.stableEnd,
+      lowWarningStart: sensorSpec.lowWarningStart,
+      lowWarningEnd: sensorSpec.lowWarningEnd,
+      highWarningStart: sensorSpec.highWarningStart,
+      highWarningEnd: sensorSpec.highWarningEnd,
+      dangerStart: sensorSpec.dangerStart,
+      dangerEnd: sensorSpec.dangerEnd,
+      decimalPlaces: sensorSpec.decimalPlaces,
+      description: sensorSpec.description,
+      graphMode: sensorSpec.graphMode,
+      manufacturer: sensorSpec.manufacturer,
+      maxValue: sensorSpec.maxValue,
+      minValue: sensorSpec.minValue,
+      model: sensorSpec.model,
+      modelId: sensorSpec.id,
+      recordedBy: userEamil,
+      unit: sensorSpec.unit,
+      useYn: sensorSpec.useYn,
+    });
   }
 
   // ------------------------

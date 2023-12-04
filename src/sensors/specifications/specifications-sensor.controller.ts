@@ -75,7 +75,11 @@ export class SensorSpecController {
   @Delete(':specificationsId')
   async deleteSensorSpecification(
     @Param('specificationsId', ParseIntPipe) specificationsId: number,
+    @User() user: UsersModel,
   ) {
-    return await this.specService.deleteSpecificationById(specificationsId);
+    return await this.specService.deleteSpecificationById(
+      specificationsId,
+      user,
+    );
   }
 }

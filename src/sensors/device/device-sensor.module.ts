@@ -6,10 +6,11 @@ import { DevicesModule } from 'src/devices/devices.module';
 import { SensorDeviceService } from './device-sensor.service';
 import { SensorDeviceController } from './device-sensor.controller';
 import { SensorSpecModule } from '../specifications/specifications-sensor.module';
+import { SensorDeviceLogModel } from './entities/device-sensor-log.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SensorDeviceModel]),
+    TypeOrmModule.forFeature([SensorDeviceModel, SensorDeviceLogModel]),
     DevicesModule,
     CommonModule,
     SensorSpecModule,

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -81,9 +77,11 @@ export class DevicesService {
       ...device,
       ...dto,
     };
+
     if (isEqual(device, comparisonData)) {
       return device;
     }
+
     const newDevice = {
       ...comparisonData,
       updatedBy: user.email,
@@ -244,11 +242,15 @@ export class DevicesService {
     return sensorAndControllerDeviceUseYnList;
   }
 
-  async updateSensorAndControllerDeviceUseYnList(list: DevicesModel[]) {
-    const newList = await this.deviceRepository.save(list);
-
-    if (!newList || newList.length === 0) {
-      throw new BadRequestException('잘못된 형식의 리스트를 입력하였습니다.');
-    }
+  async updateSensorAndControllerDeviceUseYnList(
+    list: DevicesModel[],
+    user: UsersModel,
+  ) {
+    await Promise.all(
+      list.map((model) => {
+        const updateDevice: UpdateDeviceDto = { ...model };
+        return this.updateDeviceById(model.id, updateDevice, user);
+      }),
+    );
   }
 }

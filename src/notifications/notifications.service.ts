@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { CommonService } from 'src/common/common.service';
+import { CommonService } from '../common/common.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NotificationModel } from './entities/notification.entity';
 import { Repository } from 'typeorm';
 import { NotificationsPaginationDto } from './dto/paginate-notification.dto';
-import { UsersModel } from 'src/users/entity/users.entity';
-import { DevicesModel } from 'src/devices/entities/device.entity';
-import { FirebaseNotificationService } from 'src/firebase-admin/firebase-notification.service';
-import { FirebaseAdminService } from 'src/firebase-admin/firebase-admin.service';
+import { UsersModel } from '../users/entity/users.entity';
+import { DevicesModel } from '../devices/entities/device.entity';
+import { FirebaseNotificationService } from '../firebase-admin/firebase-notification.service';
+import { FirebaseAdminService } from '../firebase-admin/firebase-admin.service';
 
 @Injectable()
 export class NotificationsService {

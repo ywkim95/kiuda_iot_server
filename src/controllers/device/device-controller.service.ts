@@ -144,7 +144,7 @@ export class ContDeviceService {
       return contDevice;
     }
 
-    const newContDevice = {
+    const newContDevice: ContDeviceModel = {
       ...comparisonData,
       updatedBy: user.email,
       updatedAt: new Date(),
@@ -167,11 +167,11 @@ export class ContDeviceService {
             ...value,
             ...customValue,
           };
-          if (isEqual(value, comparisonData)) {
-            return value;
+
+          if (!isEqual(value, comparisonData)) {
+            comparisonData.updatedBy = user.email;
+            comparisonData.updatedAt = new Date();
           }
-          comparisonData.updatedBy = user.email;
-          comparisonData.updatedAt = new Date();
 
           await this.userCustomValueRepository.save(comparisonData);
 
@@ -225,6 +225,8 @@ export class ContDeviceService {
           if (!range) {
             throw new NotFoundException();
           }
+
+          // 로그
           const rangeLog = this.createCustomSettingRangeLogModel(
             contDevice,
             range,
@@ -365,7 +367,7 @@ export class ContDeviceService {
 
   // -----------------------------------------------------------
 
-  // 제어기 및 유저 커스텀 밸류 리스트
+  // 제어기 및 유저 커스텀 밸류 리스트 가져오기
   async getContDeviceAndUserCustomValueListByGatewayId(gatewayId: number) {
     const contDeviceAndUserCustomValueList =
       await this.deviceControllersRepository.find({
@@ -394,11 +396,19 @@ export class ContDeviceService {
   }
 
   // 제어기 및 유저 커스텀 밸류 리스트 업데이트
-  async updateContDeviceAndUserCustomValueList(list: ContDeviceModel[]) {
-    const newList = await this.deviceControllersRepository.save(list);
-
-    if (!newList || newList.length === 0) {
-      throw new BadRequestException('잘못된 형식의 리스트를 입력하였습니다.');
-    }
+  async updateContDeviceAndUserCustomValueList(
+    list: ContDeviceModel[],
+    user: UsersModel,
+  ) {
+    await Promise.all(
+      list.map((model) => {
+        const updateContDevice: UpdateContDeviceDto = { ...model };
+        return this.updateDeviceControllerById(
+          model.id,
+          updateContDevice,
+          user,
+        );
+      }),
+    );
   }
 }

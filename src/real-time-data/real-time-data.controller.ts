@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   HttpStatus,
@@ -13,6 +14,7 @@ import { IsPublic } from '../common/decorator/is-public.decorator';
 import { LoRaEnum } from '../real-time-data/const/lora-enum.const';
 import { TimeUnitEnum } from './const/time-unit.enum';
 import { RealTimeDataSaveService } from './real-time-data-save.service';
+import { isValidDate } from './const/is-valid-date.const';
 
 @Controller()
 export class RealTimeDataController {
@@ -46,17 +48,16 @@ export class RealTimeDataController {
       case LoRaEnum.JOIN:
         console.log('JOIN');
         // 클라이언트(iot) -> 서버
-        return '조인함';
+        return await this.realtimeService.joinDevice(query);
       case LoRaEnum.UPDATE:
         console.log('UPDATE');
 
-        await this.realtimeService.receiveData(query);
         // 클라이언트(iot) -> 서버
         // 여기에서 서비스로직을 호출한 다음
         // 서비스 로직 내에서 db저장, roomid별로 값을 보내기
         // const roomId = data.roomId; // 예시로, 데이터에서 roomId 추출
         // this.gateway.server.to(roomId).emit('data', data); <-- 대강 이런 로직으로 짜면 될듯
-        return '업데이트함';
+        return await this.realtimeService.receiveData(query);
       case LoRaEnum.CUSTOM:
         console.log('CUSTOM');
         // 유저 -> 서버 -> 클라이언트(iot) -> 서버임
@@ -78,11 +79,20 @@ export class RealTimeDataController {
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
-    return await this.saveService.getTableAndGraph(
+    if (!isValidDate(startDate) || !isValidDate(endDate)) {
+      throw new BadRequestException('올바른 날짜 형식을 기입해주세요.');
+    }
+    const tableAndGraph = await this.saveService.getTableAndGraph(
       deviceId,
       startDate,
       endDate,
       timeUnit,
     );
+    const irradiance = await this.realtimeService.getAccumulateData(deviceId);
+
+    return {
+      tableAndGraph,
+      irradiance,
+    };
   }
 }

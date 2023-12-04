@@ -73,9 +73,13 @@ export class SensorDeviceController {
   // 삭제
   @Delete(':deviceSensorId')
   @Roles(RolesEnum.ADMIN)
-  async deleteDeviceSensor(@Param('deviceSensorId') deviceSensorId: number) {
+  async deleteDeviceSensor(
+    @Param('deviceSensorId') deviceSensorId: number,
+    @User() user: UsersModel,
+  ) {
     return await this.deviceSensorsService.deleteDeviceSensorById(
       deviceSensorId,
+      user,
     );
   }
 }
