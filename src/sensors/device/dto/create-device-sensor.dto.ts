@@ -7,6 +7,10 @@ export class CreateSensorDeviceDto extends PickType(SensorDeviceModel, [
   'customStableEnd',
   'customStableStart',
   'name',
-  'device',
-  'spec',
-]) {}
+]) {
+  @IsNumber()
+  device: number;
+
+  @IsNumber()
+  spec: number;
+}

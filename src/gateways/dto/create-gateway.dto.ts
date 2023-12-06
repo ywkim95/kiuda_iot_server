@@ -1,5 +1,6 @@
 import { PickType } from '@nestjs/mapped-types';
 import { GatewaysModel } from '../entities/gateway.entity';
+import { IsNumber } from 'class-validator';
 
 export class CreateGatewayDto extends PickType(GatewaysModel, [
   'countryId',
@@ -15,5 +16,7 @@ export class CreateGatewayDto extends PickType(GatewaysModel, [
   'location',
   'description',
   'useYn',
-  'owner',
-]) {}
+]) {
+  @IsNumber()
+  owner: number;
+}

@@ -9,6 +9,7 @@ import { isEqual } from 'lodash';
 import { ContDeviceModel } from 'src/controllers/device/entities/devices-controller.entity';
 import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
 import { DevicesModel } from 'src/devices/entities/device.entity';
+import wlogger from 'src/log/winston-logger.const';
 
 type modelList = ContDeviceModel[] | SensorDeviceModel[] | DevicesModel[];
 
@@ -67,31 +68,38 @@ export class SettingsService {
   async updateSetting(gatewayId: number, setting: Setting, user: UsersModel) {
     const currentSetting = await this.getSettingValueList(gatewayId);
 
+    console.log(setting.useYnList.length === currentSetting.useYnList.length);
+    console.log(
+      setting.controllerList.length === currentSetting.controllerList.length,
+    );
+    console.log(setting.sensorList.length === currentSetting.sensorList.length);
+
     if (
-      setting.controllerList.length === 0 ||
-      setting.sensorList.length === 0 ||
-      setting.useYnList.length === 0 ||
       setting.controllerList.length !== currentSetting.controllerList.length ||
       setting.sensorList.length !== currentSetting.sensorList.length ||
       setting.useYnList.length !== currentSetting.useYnList.length
     ) {
+      wlogger.error('잘못된 형식의 세팅값을 보냈습니다.');
       throw new BadRequestException('잘못된 형식의 세팅값을 보냈습니다.');
     }
 
-    await Promise.all([
-      this.contDeviceService.updateContDeviceAndUserCustomValueList(
+    const a =
+      await this.contDeviceService.updateContDeviceAndUserCustomValueList(
         setting.controllerList,
         user,
-      ),
-      this.sensorDeviceService.updateSensorDeviceRangeAndCorrectValueList(
+      );
+
+    const b =
+      await this.sensorDeviceService.updateSensorDeviceRangeAndCorrectValueList(
         setting.sensorList,
         user,
-      ),
-      this.devicesService.updateSensorAndControllerDeviceUseYnList(
+      );
+
+    const c =
+      await this.devicesService.updateSensorAndControllerDeviceUseYnList(
         setting.useYnList,
         user,
-      ),
-    ]);
+      );
 
     return true;
   }

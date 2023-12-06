@@ -2,7 +2,7 @@ import * as winston from 'winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 
 const wlogger = winston.createLogger({
-  level: 'info',
+  level: 'error',
   format: winston.format.json(),
   transports: [
     new winston.transports.Console({

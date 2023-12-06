@@ -56,15 +56,15 @@ export class GatewaysModel extends BaseWithUpdateModel {
   @IsOptional()
   description?: string;
 
-  @Column({ comment: '주파수' })
+  @Column({ type: 'double precision', comment: '주파수' })
   @IsNumber()
   frequency: number;
 
-  @Column({ comment: 'TXPower' })
+  @Column({ type: 'double precision', comment: 'TXPower' })
   @IsNumber()
   txPower: number;
 
-  @Column({ comment: 'RFConfig' })
+  @Column({ type: 'double precision', comment: 'RFConfig' })
   @IsNumber()
   rfConfig: number;
 

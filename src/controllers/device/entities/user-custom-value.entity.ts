@@ -5,11 +5,11 @@ import { ContDeviceModel } from './devices-controller.entity';
 
 @Entity()
 export class UserCustomValueModel extends BaseWithUpdateModel {
-  @Column({ comment: '제어 동작 값' })
+  @Column({ type: 'double precision', comment: '제어 동작 값' })
   @IsNumber()
   manualValue: number;
 
-  @Column({ comment: '제어 편차', default: 0 })
+  @Column({ type: 'double precision', comment: '제어 편차', default: 0 })
   @IsNumber()
   gab: number;
 

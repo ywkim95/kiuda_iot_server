@@ -19,6 +19,9 @@ import { SensorDeviceService } from '../sensors/device/device-sensor.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WarningEnum, sentence } from '../notifications/const/sentence.const';
 import { AccumulatedIrradianceModel } from './entities/accumulate/accumulated-irradiance.entity';
+import { GatewaysService } from 'src/gateways/gateways.service';
+import { JoinLoraDto } from './dto/lora/join-lora.dto';
+import wlogger from 'src/log/winston-logger.const';
 
 type Data = {
   ghid: string;
@@ -36,6 +39,7 @@ export class RealTimeDataService {
     private readonly realtimeControllersRepository: Repository<ContRealTimeDataModel>,
     @InjectRepository(AccumulatedIrradianceModel)
     private readonly accumulatedIrradianceRepository: Repository<AccumulatedIrradianceModel>,
+    private readonly gatewayService: GatewaysService,
     private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
     private readonly notiService: NotificationsService,
@@ -43,28 +47,21 @@ export class RealTimeDataService {
 
   // 클라이언트 연결(디바이스 연결)
 
-  async joinDevice(dto: any) {
+  async joinDevice(dto: JoinLoraDto) {
     try {
-      const deviceList = await this.devicesService.findDeviceList(
-        dto.ghid,
-        dto.glid,
-        dto.gid,
-      );
-
-      if (!deviceList || deviceList.length === 0) {
-        throw new NotFoundException();
-      }
+      const gateway = await this.gatewayService.matchingGateway(dto);
 
       const data = {
-        ghid: dto.ghid,
-        glid: dto.glid,
-        gid: dto.gid,
+        countryId: gateway.countryId,
+        areaId: gateway.areaId,
+        gatewayId: gateway.gatewayId,
       };
 
-      return `SV+ULD:${data.ghid},${data.glid},${data.gid},OK`;
+      return `SV+ULD:${data.countryId},${data.areaId},${data.gatewayId},OK`;
     } catch (error) {
       console.error(error);
-      throw new NotFoundException();
+      wlogger.error('정확한 게이트웨이 정보를 입력해주세요.', error);
+      throw new NotFoundException(error);
     }
   }
 
@@ -95,7 +92,7 @@ export class RealTimeDataService {
       data = await this.saveControllerData(dto);
     }
     if (!data) {
-      throw new NotFoundException();
+      throw new NotFoundException('데이터가 없습니다.');
     }
 
     return data;
@@ -130,7 +127,8 @@ export class RealTimeDataService {
       return returnData;
     } catch (error) {
       // 에러 처리 로직
-      throw new ConflictException();
+      wlogger.error('유효성 에러', error);
+      throw new BadRequestException(error);
     }
   }
 
@@ -164,17 +162,17 @@ export class RealTimeDataService {
     sensorDevice: SensorDeviceModel,
     data: number,
   ): Promise<string | null> {
-    const checkData = sensorDevice.spec;
+    const sensorSpec = sensorDevice.spec;
     let message = null;
 
-    if (data > checkData.lowWarningStart && data <= checkData.lowWarningEnd) {
+    if (data > sensorSpec.lowWarningStart && data <= sensorSpec.lowWarningEnd) {
       message = sentence(sensorDevice.name, WarningEnum.LOW, data);
     } else if (
-      data > checkData.highWarningStart &&
-      data <= checkData.highWarningEnd
+      data > sensorSpec.highWarningStart &&
+      data <= sensorSpec.highWarningEnd
     ) {
       message = sentence(sensorDevice.name, WarningEnum.HIGH, data);
-    } else if (data > checkData.dangerStart && data <= checkData.dangerEnd) {
+    } else if (data > sensorSpec.dangerStart && data <= sensorSpec.dangerEnd) {
       message = sentence(sensorDevice.name, WarningEnum.DANGER, data);
     }
 
@@ -243,6 +241,7 @@ export class RealTimeDataService {
     });
 
     if (!irradiance) {
+      wlogger.error('올바른 아이디를 입력해주세요.');
       throw new BadRequestException('올바른 아이디를 입력해주세요.');
     }
 

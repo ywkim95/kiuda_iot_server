@@ -1,15 +1,15 @@
 import { IsNumber, IsOptional, IsString } from 'class-validator';
-import { BaseLogModel } from 'src/common/entity/base-log.entity';
+import { BaseLogModel } from '../../../common/entity/base-log.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ContDeviceModel } from './devices-controller.entity';
 
 @Entity()
 export class UserCustomValueLogModel extends BaseLogModel {
-  @Column({ comment: '기존 제어 동작 값' })
+  @Column({ type: 'double precision', comment: '기존 제어 동작 값' })
   @IsNumber()
   manualValue: number;
 
-  @Column({ comment: '기존 제어 편차' })
+  @Column({ type: 'double precision', comment: '기존 제어 편차' })
   @IsNumber()
   gab: number;
 
@@ -18,6 +18,6 @@ export class UserCustomValueLogModel extends BaseLogModel {
   @IsOptional()
   memo: string;
 
-  @ManyToOne(() => ContDeviceModel, (model) => model.userCustomValues)
-  contDevice: ContDeviceModel;
+  @Column({ comment: '기존 제어기 아이디' })
+  contDeviceId: number;
 }

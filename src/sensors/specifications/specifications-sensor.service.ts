@@ -9,6 +9,9 @@ import { UsersModel } from '../../users/entity/users.entity';
 import { UpdateSensorSpecDto } from './dto/update-specifications-sensor.dto';
 import { isEqual } from 'lodash';
 import { SensorSpecLogModel } from './entities/specifications-sensor-log.entity';
+import wlogger from 'src/log/winston-logger.const';
+import { ActionEnum } from 'src/common/const/action-enum.const';
+import { SensorDeviceModel } from '../device/entities/device-sensor.entity';
 
 @Injectable()
 export class SensorSpecService {
@@ -41,6 +44,9 @@ export class SensorSpecService {
     });
 
     if (!spec) {
+      wlogger.error(
+        `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
+      );
       throw new NotFoundException(
         `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
       );
@@ -84,7 +90,11 @@ export class SensorSpecService {
       updatedAt: new Date(),
     };
 
-    const specLog = this.createSensorSpecLogModel(spec, user.email);
+    const specLog = this.createSensorSpecLogModel(
+      spec,
+      user.email,
+      ActionEnum.PATCH,
+    );
 
     await this.sensorSpecificationLogRepository.save(specLog);
 
@@ -95,7 +105,11 @@ export class SensorSpecService {
   async deleteSpecificationById(id: number, user: UsersModel) {
     const spec = await this.getSensorSpecificationById(id);
 
-    const specLog = this.createSensorSpecLogModel(spec, user.email);
+    const specLog = this.createSensorSpecLogModel(
+      spec,
+      user.email,
+      ActionEnum.DELETE,
+    );
 
     await this.sensorSpecificationLogRepository.save(specLog);
 
@@ -105,7 +119,11 @@ export class SensorSpecService {
   // ------------------------------------------------------------------
 
   // 로그 모델 생성 로직
-  createSensorSpecLogModel(sensorSpec: SensorSpecModel, userEamil: string) {
+  createSensorSpecLogModel(
+    sensorSpec: SensorSpecModel,
+    userEamil: string,
+    actionType: ActionEnum,
+  ) {
     return this.sensorSpecificationLogRepository.create({
       name: sensorSpec.name,
       varName: sensorSpec.varName,
@@ -128,6 +146,7 @@ export class SensorSpecService {
       recordedBy: userEamil,
       unit: sensorSpec.unit,
       useYn: sensorSpec.useYn,
+      actionType,
     });
   }
 

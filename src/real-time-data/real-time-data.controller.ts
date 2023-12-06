@@ -15,6 +15,8 @@ import { LoRaEnum } from '../real-time-data/const/lora-enum.const';
 import { TimeUnitEnum } from './const/time-unit.enum';
 import { RealTimeDataSaveService } from './real-time-data-save.service';
 import { isValidDate } from './const/is-valid-date.const';
+import { JoinLoraDto } from './dto/lora/join-lora.dto';
+import wlogger from 'src/log/winston-logger.const';
 
 @Controller()
 export class RealTimeDataController {
@@ -48,7 +50,7 @@ export class RealTimeDataController {
       case LoRaEnum.JOIN:
         console.log('JOIN');
         // 클라이언트(iot) -> 서버
-        return await this.realtimeService.joinDevice(query);
+        return await this.realtimeService.joinDevice(query as JoinLoraDto);
       case LoRaEnum.UPDATE:
         console.log('UPDATE');
 
@@ -80,7 +82,12 @@ export class RealTimeDataController {
     @Query('endDate') endDate: string,
   ) {
     if (!isValidDate(startDate) || !isValidDate(endDate)) {
-      throw new BadRequestException('올바른 날짜 형식을 기입해주세요.');
+      wlogger.error(
+        'stateDate와 endDate에 올바른 날짜형식을 기입해주세요. -- yyyy-MM-ddTHH:mm:ssZ --',
+      );
+      throw new BadRequestException(
+        'stateDate와 endDate에 올바른 날짜형식을 기입해주세요. -- yyyy-MM-ddTHH:mm:ssZ --',
+      );
     }
     const tableAndGraph = await this.saveService.getTableAndGraph(
       deviceId,

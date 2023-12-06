@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -16,6 +17,7 @@ import { UpdateSensorDeviceDto } from './dto/update-device-sensor.dto';
 import { SensorDeviceService } from './device-sensor.service';
 import { Roles } from 'src/users/decorator/roles.decorator';
 import { RolesEnum } from 'src/users/const/roles.const';
+import { IsPublic } from 'src/common/decorator/is-public.decorator';
 
 @Controller('sensors/deviceSensors')
 export class SensorDeviceController {
@@ -24,6 +26,7 @@ export class SensorDeviceController {
   // -----------------------------------------------------------
   // 자동생성기
   @Get('deviceSensors/generates')
+  @Roles(RolesEnum.ADMIN)
   async generateDeviceSensors(@User() user: UsersModel) {
     await this.deviceSensorsService.generateDeviceSensors(user);
 
@@ -52,14 +55,16 @@ export class SensorDeviceController {
 
   // 조회
   @Get(':deviceSensorId')
-  async getDeviceSensor(@Param('deviceSensorId') deviceSensorId: number) {
+  async getDeviceSensor(
+    @Param('deviceSensorId', ParseIntPipe) deviceSensorId: number,
+  ) {
     return await this.deviceSensorsService.getDeviceSensorById(deviceSensorId);
   }
 
   // 수정
   @Patch(':deviceSensorId')
   async patchDeviceSensor(
-    @Param('deviceSensorId') deviceSensorId: number,
+    @Param('deviceSensorId', ParseIntPipe) deviceSensorId: number,
     @Body() body: UpdateSensorDeviceDto,
     @User() user: UsersModel,
   ) {
@@ -74,7 +79,7 @@ export class SensorDeviceController {
   @Delete(':deviceSensorId')
   @Roles(RolesEnum.ADMIN)
   async deleteDeviceSensor(
-    @Param('deviceSensorId') deviceSensorId: number,
+    @Param('deviceSensorId', ParseIntPipe) deviceSensorId: number,
     @User() user: UsersModel,
   ) {
     return await this.deviceSensorsService.deleteDeviceSensorById(

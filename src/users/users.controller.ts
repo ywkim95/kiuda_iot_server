@@ -57,6 +57,7 @@ export class UsersController {
       ip,
       agent.device.toString(),
       qr,
+      UpdatesEnum.INFORMATION,
     );
 
     return true;
@@ -105,6 +106,7 @@ export class UsersController {
       ip,
       agent.device.toString(),
       qr,
+      UpdatesEnum.PERMISSION,
     );
 
     return true;

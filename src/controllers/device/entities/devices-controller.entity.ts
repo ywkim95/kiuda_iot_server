@@ -3,8 +3,8 @@ import { DevicesModel } from '../../../devices/entities/device.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ContSpecModel } from '../../specifications/entities/specifications-controller.entity';
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
-import { CustomSettingRangeModel } from './custom-setting-range.entity';
 import { UserCustomValueModel } from './user-custom-value.entity';
+import { CustomSettingRangeModel } from './custom-setting-range.entity';
 
 // 실제 등록할 디바이스
 
@@ -35,7 +35,6 @@ export class ContDeviceModel extends BaseWithUpdateModel {
   @ManyToOne(() => ContSpecModel)
   @JoinColumn()
   specification: ContSpecModel;
-
   // 매핑된 센서의 아이디
   @Column({ comment: '매핑된 센서의 아이디' })
   @IsNumber()

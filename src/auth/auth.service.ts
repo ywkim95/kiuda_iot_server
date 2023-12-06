@@ -13,6 +13,7 @@ import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { oneMonthTimes, thirtyMinutesTimes } from './const/expires-in.const';
+import wlogger from 'src/log/winston-logger.const';
 /**
  * 토큰을 사용하게 되는 방식
  *
@@ -82,6 +83,7 @@ export class AuthService {
     const prefix = isBearer ? 'Bearer' : 'Basic';
 
     if (splitToken.length !== 2 || splitToken[0] !== prefix) {
+      wlogger.error('잘못된 토큰입니다!');
       throw new UnauthorizedException('잘못된 토큰입니다!');
     }
 
@@ -96,6 +98,7 @@ export class AuthService {
     const split = decoded.split(':');
 
     if (split.length !== 2) {
+      wlogger.error('잘못된 유형의 토큰입니다!');
       throw new UnauthorizedException('잘못된 유형의 토큰입니다.');
     }
     const email = split[0];
@@ -110,6 +113,7 @@ export class AuthService {
         secret: this.configService.get<string>(ENV_JWT_SECRET_KEY),
       });
     } catch (error) {
+      wlogger.error('토큰이 만료됐거나 잘못된 토큰입니다.');
       throw new UnauthorizedException('토큰이 만료됐거나 잘못된 토큰입니다.');
     }
   }
@@ -120,6 +124,7 @@ export class AuthService {
     });
 
     if (decoded.type !== 'refresh') {
+      wlogger.error(`토큰 재발급은 Refresh 토큰으로만 가능합니다.`);
       throw new UnauthorizedException(
         '토큰 재발급은 Refresh 토큰으로만 가능합니다.',
       );

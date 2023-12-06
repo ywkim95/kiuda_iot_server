@@ -1,21 +1,24 @@
 import { PickType } from '@nestjs/mapped-types';
 import { ContDeviceModel } from '../entities/devices-controller.entity';
-import { ValidateNested } from 'class-validator';
+import { IsNumber, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateContDeviceDto extends PickType(ContDeviceModel, [
-  'device',
   'name',
   'varName',
   'location',
   'useYn',
-  'specification',
   'mappingSensorId',
   'connectedDeviceId',
 ]) {
   @ValidateNested({ each: true })
-  @Type(() => CreateUserCustomValueDto)
-  userCustomValueList: CreateUserCustomValueDto[];
+  userCustomValues: CreateUserCustomValueDto[];
+
+  @IsNumber()
+  device: number;
+
+  @IsNumber()
+  specification: number;
 }
 
 export class CreateUserCustomValueDto {

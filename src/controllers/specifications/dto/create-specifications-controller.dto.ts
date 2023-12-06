@@ -1,6 +1,6 @@
 import { PickType } from '@nestjs/mapped-types';
 import { ContSpecModel } from '../entities/specifications-controller.entity';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateContSpecDto extends PickType(ContSpecModel, [
@@ -15,11 +15,11 @@ export class CreateContSpecDto extends PickType(ContSpecModel, [
   'description',
 ]) {
   @ValidateNested({ each: true })
-  @Type(() => CreateStepDto)
   specificationSteps: CreateStepDto[];
 }
 
 export class CreateStepDto {
+  @IsOptional()
   id?: number;
 
   value: number;

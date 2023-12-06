@@ -12,5 +12,7 @@ export class CreateDeviceDto extends PickType(DevicesModel, [
   'useYn',
   'statusCode',
   'clientId',
-  'gateway',
-]) {}
+]) {
+  @IsNumber()
+  gateway: number;
+}

@@ -15,7 +15,6 @@ import { ContDeviceModel } from '../../controllers/device/entities/devices-contr
 @Entity()
 export class DevicesModel extends BaseWithUpdateModel {
   @Column({
-    unique: true,
     comment: '기기 명',
   })
   @IsString()

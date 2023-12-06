@@ -13,6 +13,7 @@ import { DevicesService } from '../devices/devices.service';
 import { AbstractAverageModel } from './entities/average/abstract-average.entity';
 import { DailyAverageModel } from './entities/average/daily-average.entity';
 import { MonthlyAverageModel } from './entities/average/monthly-average.entity';
+import wlogger from 'src/log/winston-logger.const';
 
 @Injectable()
 export class RealTimeDataSaveService {
@@ -55,6 +56,9 @@ export class RealTimeDataSaveService {
     const eDate = endDate ? new Date(endDate) : new Date();
 
     if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+      wlogger.error(
+        'stateDate와 endDate에 올바른 날짜형식을 기입해주세요. -- yyyy-MM-ddTHH:mm:ssZ --',
+      );
       throw new BadRequestException(
         'stateDate와 endDate에 올바른 날짜형식을 기입해주세요. -- yyyy-MM-ddTHH:mm:ssZ --',
       );
@@ -100,7 +104,12 @@ export class RealTimeDataSaveService {
       .getMany();
 
     if (datas.length === 0) {
-      throw new NotFoundException();
+      wlogger.error(
+        `해당 레포지토리에 매칭되는 데이터가 없습니다.\n id:${id}, repository: ${repository}\n 기간: ${startDate} ~ ${endDate}`,
+      );
+      throw new NotFoundException(
+        `해당 레포지토리에 매칭되는 데이터가 없습니다.\n id:${id}, repository: ${repository}\n 기간: ${startDate} ~ ${endDate}`,
+      );
     }
 
     return datas;
@@ -181,7 +190,8 @@ export class RealTimeDataSaveService {
       case TimeUnitEnum.MONTHLY:
         return new MonthlyAverageModel() as T;
       default:
-        throw new TypeError();
+        wlogger.error('정확한 타입을 지정해주세요.');
+        throw new TypeError('정확한 타입을 지정해주세요.');
     }
   }
 

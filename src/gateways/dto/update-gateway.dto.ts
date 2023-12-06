@@ -2,7 +2,7 @@ import { PartialType, PickType } from '@nestjs/mapped-types';
 import { CreateGatewayDto } from './create-gateway.dto';
 import { GatewaysModel } from '../entities/gateway.entity';
 
-export class UpdateGatewayDto extends PickType(GatewaysModel, [
+class UpdateGatewayDtoPick extends PickType(GatewaysModel, [
   'name',
   'ssid',
   'ssidPassword',
@@ -14,3 +14,5 @@ export class UpdateGatewayDto extends PickType(GatewaysModel, [
   'description',
   'useYn',
 ]) {}
+
+export class UpdateGatewayDto extends PartialType(UpdateGatewayDtoPick) {}

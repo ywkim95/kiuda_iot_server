@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import wlogger from 'src/log/winston-logger.const';
 
 @Injectable()
 export class FirebaseNotificationService {
@@ -24,7 +25,8 @@ export class FirebaseNotificationService {
     try {
       await this.firebaseAdmin.messaging().send(message);
     } catch (error) {
-      throw new InternalServerErrorException();
+      wlogger.error(`firebase notification push Error! ${error.message}`);
+      throw new InternalServerErrorException(error);
     }
   }
 }

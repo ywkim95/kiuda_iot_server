@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { UpdateSensorDeviceDto } from './dto/update-device-sensor.dto';
 import { UsersModel } from '../../users/entity/users.entity';
@@ -15,6 +17,9 @@ import { SensorSpecService } from '../specifications/specifications-sensor.servi
 import { CommonService } from '../../common/common.service';
 import { isEqual } from 'lodash';
 import { SensorDeviceLogModel } from './entities/device-sensor-log.entity';
+import wlogger from 'src/log/winston-logger.const';
+import { ContDeviceService } from 'src/controllers/device/device-controller.service';
+import { RangeUpdateType } from './const/range-update-type-enum.const';
 
 @Injectable()
 export class SensorDeviceService {
@@ -26,6 +31,8 @@ export class SensorDeviceService {
     private readonly deviceService: DevicesService,
     private readonly specService: SensorSpecService,
     private readonly commonService: CommonService,
+    @Inject(forwardRef(() => ContDeviceService))
+    private readonly contDeviceService: ContDeviceService,
   ) {}
 
   // 실기기
@@ -57,7 +64,10 @@ export class SensorDeviceService {
       },
     });
 
-    if (deviceSensor) {
+    if (!deviceSensor) {
+      wlogger.error(
+        `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
+      );
       throw new NotFoundException(
         `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
       );
@@ -68,10 +78,15 @@ export class SensorDeviceService {
 
   // 등록
   async createDeviceSensor(dto: CreateSensorDeviceDto, user: UsersModel) {
+    const device = await this.deviceService.getDeviceById(dto.device);
+
+    const spec = await this.specService.getSensorSpecificationById(dto.spec);
+
     const sensorDevice = this.deviceSensorRepository.create({
       ...dto,
+      device,
+      spec,
       createdBy: user.email,
-      updatedBy: user.email,
     });
 
     const newSensorDevice = this.deviceSensorRepository.save(sensorDevice);
@@ -87,9 +102,15 @@ export class SensorDeviceService {
   ) {
     const deviceSensor = await this.getDeviceSensorById(id);
 
-    const comparisonData = {
+    const device = await this.deviceService.getDeviceById(dto.device);
+
+    const spec = await this.specService.getSensorSpecificationById(dto.spec);
+
+    const comparisonData: SensorDeviceModel = {
       ...deviceSensor,
       ...dto,
+      device,
+      spec,
     };
 
     if (isEqual(deviceSensor, comparisonData)) {
@@ -166,7 +187,10 @@ export class SensorDeviceService {
     });
 
     if (!deviceList || deviceList.length === 0) {
-      throw new NotFoundException();
+      wlogger.error('해당하는 디바이스 목록이 존재하지 않습니다.');
+      throw new NotFoundException(
+        '해당하는 디바이스 목록이 존재하지 않습니다.',
+      );
     }
 
     return deviceList;
@@ -181,6 +205,7 @@ export class SensorDeviceService {
     });
 
     if (sensorList.length === 0) {
+      wlogger.error('해당하는 센서 디바이스 목록이 존재하지 않습니다.');
       throw new NotFoundException(
         '해당하는 센서 디바이스 목록이 존재하지 않습니다.',
       );
@@ -202,7 +227,10 @@ export class SensorDeviceService {
     });
 
     if (list.length === 0) {
-      throw new NotFoundException();
+      wlogger.error('해당하는 센서 디바이스 목록이 존재하지 않습니다.');
+      throw new NotFoundException(
+        '해당하는 센서 디바이스 목록이 존재하지 않습니다.',
+      );
     }
 
     return list;
@@ -219,6 +247,9 @@ export class SensorDeviceService {
       list.map((device) => this.deviceSensorRepository.save(device)),
     );
     if (sensorReturn.length === 0) {
+      wlogger.error(
+        '센서 디바이스 리스트를 저장하는데 실패했습니다. 다시 한 번 리스트를 확인해주세요',
+      );
       throw new BadRequestException(
         '센서 디바이스 리스트를 저장하는데 실패했습니다. 다시 한 번 리스트를 확인해주세요',
       );
@@ -239,14 +270,15 @@ export class SensorDeviceService {
           },
         },
       });
-    if (
-      !sensorDeviceRangeAndCorrectValueList ||
-      sensorDeviceRangeAndCorrectValueList.length === 0
-    ) {
-      throw new NotFoundException(
-        '해당 게이트웨이에 디바이스 정보가 없습니다.',
-      );
-    }
+    // if (
+    //   !sensorDeviceRangeAndCorrectValueList ||
+    //   sensorDeviceRangeAndCorrectValueList.length === 0
+    // ) {
+    //   wlogger.error('해당 게이트웨이에 디바이스 정보가 없습니다.');
+    //   throw new NotFoundException(
+    //     '해당 게이트웨이에 디바이스 정보가 없습니다.',
+    //   );
+    // }
     return sensorDeviceRangeAndCorrectValueList;
   }
 
@@ -255,12 +287,62 @@ export class SensorDeviceService {
     list: SensorDeviceModel[],
     user: UsersModel,
   ) {
-    await Promise.all(
-      list.map((model) => {
-        const updateSensorDevice: UpdateSensorDeviceDto = { ...model };
-        return this.updateDeviceSensorById(model.id, updateSensorDevice, user);
-      }),
-    );
+    const newList = list.map(async (model) => {
+      const sensorDevice = await this.deviceSensorRepository.findOne({
+        where: {
+          id: model.id,
+        },
+        relations: {
+          device: true,
+          spec: true,
+        },
+      });
+
+      if (!sensorDevice) {
+        wlogger.error('센서디바이스의 아이디를 다시 확인해주세요.');
+        throw new NotFoundException(
+          '센서디바이스의 아이디를 다시 확인해주세요.',
+        );
+      }
+
+      const updateSensorDevice: UpdateSensorDeviceDto = {
+        ...model,
+        device: sensorDevice.device.id,
+        spec: sensorDevice.spec.id,
+      };
+
+      try {
+        // 커스텀 레인지 모델 첫번째 및 마지막 값 업데이트
+        if (model.customStableStart !== sensorDevice.customStableStart) {
+          console.log('1');
+          await this.contDeviceService.updateCustomSettingRange(
+            model,
+            RangeUpdateType.START,
+            user.email,
+          );
+        }
+
+        if (model.customStableEnd !== sensorDevice.customStableEnd) {
+          console.log('2');
+          await this.contDeviceService.updateCustomSettingRange(
+            model,
+            RangeUpdateType.END,
+            user.email,
+          );
+        }
+      } catch (error) {
+        console.log(error);
+        throw new Error(error);
+      }
+
+      return await this.updateDeviceSensorById(
+        model.id,
+        updateSensorDevice,
+        user,
+      );
+    });
+
+    return await Promise.all(newList);
   }
 
   // 자동생성기
@@ -271,8 +353,8 @@ export class SensorDeviceService {
       dto.name = `hello{i}`;
       dto.customStableStart = 0;
       dto.customStableEnd = 6000;
-      dto.device = await this.deviceService.getDeviceById(5);
-      dto.spec = await this.specService.getSensorSpecificationById(5);
+      dto.device = 1;
+      dto.spec = 2;
       await this.createDeviceSensor(dto, user);
     }
   }

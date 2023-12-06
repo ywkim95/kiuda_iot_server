@@ -1,14 +1,13 @@
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
-import { BaseLogModel } from 'src/common/entity/base-log.entity';
-import { ContSpecModel } from 'src/controllers/specifications/entities/specifications-controller.entity';
-import { DevicesModel } from 'src/devices/entities/device.entity';
+import { BaseLogModel } from '../../../common/entity/base-log.entity';
+import { ContSpecModel } from '../../../controllers/specifications/entities/specifications-controller.entity';
+import { DevicesModel } from '../../../devices/entities/device.entity';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity()
 export class ContDeviceLogModel extends BaseLogModel {
-  @ManyToOne(() => DevicesModel)
-  @JoinColumn()
-  device: DevicesModel;
+  @Column({ comment: '기존 디바이스의 아이디' })
+  deviceId: number;
 
   @Column({ comment: '기존 장비 명' })
   @IsString()
@@ -23,14 +22,13 @@ export class ContDeviceLogModel extends BaseLogModel {
   @IsOptional()
   location?: string;
 
-  @Column({ comment: '기존 사용유무', default: true })
+  @Column({ comment: '기존 사용유무' })
   @IsBoolean()
   useYn: boolean;
 
   // 제원
-  @ManyToOne(() => ContSpecModel)
-  @JoinColumn()
-  specification: ContSpecModel;
+  @Column({ comment: '기존 제원의 아이디' })
+  specificationId: number;
 
   // 매핑된 센서의 아이디
   @Column({ comment: '기존 매핑된 센서의 아이디' })

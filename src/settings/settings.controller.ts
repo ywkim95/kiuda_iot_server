@@ -26,14 +26,14 @@ export class SettingsController {
 
   // 세팅값 가져오기
   // adminOrMe
-  @Get('setting/:gatewayId')
+  @Get(':gatewayId')
   async getSetting(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
     return await this.settingsService.getSettingValueList(gatewayId);
   }
 
   // 세팅값 저장하기
   // adminOrMe
-  @Patch('setting/:gatewayId')
+  @Patch(':gatewayId')
   async patchSetting(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: Setting,

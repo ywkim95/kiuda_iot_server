@@ -12,6 +12,10 @@ import { UpdateIdGatewayDto } from './dto/update-id-gateway.dto';
 import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
 import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
 import { GatewaysLogModel } from './entities/gateway-log.entity';
+import { UsersService } from 'src/users/users.service';
+import { ActionEnum } from 'src/common/const/action-enum.const';
+import { JoinLoraDto } from 'src/real-time-data/dto/lora/join-lora.dto';
+import wlogger from 'src/log/winston-logger.const';
 @Injectable()
 export class GatewaysService {
   constructor(
@@ -20,6 +24,7 @@ export class GatewaysService {
     @InjectRepository(GatewaysLogModel)
     private readonly gatewaysLogRepository: Repository<GatewaysLogModel>,
     private readonly commonService: CommonService,
+    private readonly usersService: UsersService,
   ) {
     /**
      * 1. 검색 + 게이트웨이 리스트 조회 - 완료
@@ -33,16 +38,20 @@ export class GatewaysService {
 
   // pagination
   async paginateGateways(dto: GatewaysPaginationDto) {
-    return await this.commonService.paginate(
-      dto,
-      this.gatewaysRepository,
-      {
-        relations: {
-          owner: true,
+    try {
+      return await this.commonService.paginate(
+        dto,
+        this.gatewaysRepository,
+        {
+          relations: {
+            owner: true,
+          },
         },
-      },
-      'gateways',
-    );
+        'gateways',
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   // 조회
@@ -53,52 +62,81 @@ export class GatewaysService {
       },
     });
     if (!gateway) {
-      throw new NotFoundException();
+      wlogger.error(`해당하는 게이트웨이가 없습니다! id: ${id}`);
+      throw new NotFoundException(`해당하는 게이트웨이가 없습니다! id: ${id}`);
     }
     return gateway;
   }
 
   // 등록
   async createGateway(dto: CreateGatewayDto, user: UsersModel) {
-    const gateway = this.gatewaysRepository.create({
-      ...dto,
-      createdBy: user.email,
-      updatedBy: user.email,
-    });
+    try {
+      const owner = await this.usersService.getUserById(dto.owner);
 
-    const newGateway = await this.gatewaysRepository.save(gateway);
+      const gateway = this.gatewaysRepository.create({
+        ...dto,
+        owner,
+        createdBy: user.email,
+      });
 
-    return newGateway;
+      const newGateway = await this.gatewaysRepository.save(gateway);
+
+      if (!newGateway) {
+        return {
+          success: false,
+          gateway: null,
+        };
+      }
+
+      return {
+        success: true,
+        gateway: newGateway,
+      };
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   // 수정
   async updateGatewayById(id: number, dto: UpdateGatewayDto, user: UsersModel) {
-    const gateway = await this.getGatewayById(id);
+    try {
+      const gateway = await this.getGatewayById(id);
 
-    const comparisonData = { ...gateway, ...dto };
+      const comparisonData = { ...gateway, ...dto };
 
-    if (isEqual(gateway, comparisonData)) {
-      return gateway;
+      if (isEqual(gateway, comparisonData)) {
+        return gateway;
+      }
+
+      const newGateway = {
+        ...comparisonData,
+        updatedAt: new Date(),
+        updatedBy: user.email,
+      };
+
+      const gatewayLog = this.createGatewayLogModel(
+        gateway,
+        user.email,
+        ActionEnum.PATCH,
+      );
+
+      await this.gatewaysLogRepository.save(gatewayLog);
+
+      return await this.gatewaysRepository.save(newGateway);
+    } catch (error) {
+      console.log(error);
     }
-
-    const newGateway = {
-      ...comparisonData,
-      updatedAt: new Date(),
-      updatedBy: user.email,
-    };
-
-    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
-
-    await this.gatewaysLogRepository.save(gatewayLog);
-
-    return await this.gatewaysRepository.save(newGateway);
   }
 
   // 삭제
   async deleteGatewayById(id: number, user: UsersModel) {
     const gateway = await this.getGatewayById(id);
 
-    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+    const gatewayLog = this.createGatewayLogModel(
+      gateway,
+      user.email,
+      ActionEnum.DELETE,
+    );
 
     await this.gatewaysLogRepository.save(gatewayLog);
 
@@ -137,7 +175,11 @@ export class GatewaysService {
       lastPkUpdateDate: new Date(),
     };
 
-    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+    const gatewayLog = this.createGatewayLogModel(
+      gateway,
+      user.email,
+      ActionEnum.PATCH,
+    );
 
     await this.gatewaysLogRepository.save(gatewayLog);
 
@@ -163,7 +205,11 @@ export class GatewaysService {
       updatedBy: user.email,
     };
 
-    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+    const gatewayLog = this.createGatewayLogModel(
+      gateway,
+      user.email,
+      ActionEnum.PATCH,
+    );
 
     await this.gatewaysLogRepository.save(gatewayLog);
 
@@ -193,7 +239,11 @@ export class GatewaysService {
       updatedBy: user.email,
     };
 
-    const gatewayLog = this.createGatewayLogModel(gateway, user.email);
+    const gatewayLog = this.createGatewayLogModel(
+      gateway,
+      user.email,
+      ActionEnum.PATCH,
+    );
 
     await this.gatewaysLogRepository.save(gatewayLog);
 
@@ -219,12 +269,18 @@ export class GatewaysService {
     });
 
     if (!gateway) {
-      throw new NotFoundException();
+      wlogger.error(`해당하는 게이트웨이가 없습니다! id: ${id}`);
+      throw new NotFoundException(`해당하는 게이트웨이가 없습니다! id: ${id}`);
     }
     return gateway.devices;
   }
 
-  createGatewayLogModel(gateway: GatewaysModel, userEmail: string) {
+  // 게이트웨이 로그 모델 생성
+  createGatewayLogModel(
+    gateway: GatewaysModel,
+    userEmail: string,
+    actionType: ActionEnum,
+  ) {
     return this.gatewaysLogRepository.create({
       modelId: gateway.id,
       countryId: gateway.countryId,
@@ -245,7 +301,34 @@ export class GatewaysService {
       useYn: gateway.useYn,
       resetYn: gateway.resetYn,
       recordedBy: userEmail,
+      actionType,
     });
+  }
+
+  // 값들을 받아 해당 값들이 일치하는 게이트웨이가 있는지 확인하는 로직
+  async matchingGateway(dto: JoinLoraDto) {
+    const gateway = await this.gatewaysRepository.findOne({
+      where: {
+        countryId: dto.ghid,
+        areaId: dto.glid,
+        gatewayId: dto.gid,
+        frequency: dto.freq,
+        txPower: dto.power,
+        rfConfig: dto.config,
+        ssid: dto.ssid,
+        ssidPassword: dto.ssidPwd,
+      },
+    });
+
+    if (!gateway) {
+      wlogger.error(
+        `해당하는 게이트웨이가 없습니다! countryId: ${dto.ghid}, areaId: ${dto.glid}, gatewayId: ${dto.gid}`,
+      );
+      throw new NotFoundException(
+        `해당하는 게이트웨이가 없습니다! countryId: ${dto.ghid}, areaId: ${dto.glid}, gatewayId: ${dto.gid}`,
+      );
+    }
+    return gateway;
   }
 
   // 자동생성기

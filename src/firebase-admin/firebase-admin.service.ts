@@ -4,6 +4,7 @@ import { UsersModel } from 'src/users/entity/users.entity';
 import { FirebaseModel } from './entities/firebase.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
+import wlogger from 'src/log/winston-logger.const';
 
 @Injectable()
 export class FirebaseAdminService {
@@ -21,7 +22,8 @@ export class FirebaseAdminService {
       },
     });
     if (tokenList.length === 0) {
-      throw new NotFoundException();
+      wlogger.error('유저가 가진 토큰이 없습니다.');
+      throw new NotFoundException('유저가 가진 토큰이 없습니다.');
     }
     return tokenList;
   }

@@ -6,6 +6,7 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable, catchError, tap } from 'rxjs';
+import wlogger from 'src/log/winston-logger.const';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -35,6 +36,8 @@ export class TransactionInterceptor implements NestInterceptor {
       catchError(async (e) => {
         await qr.rollbackTransaction();
         await qr.release();
+
+        wlogger.error(`transaction Error! ${e.message}`);
 
         throw new InternalServerErrorException(e.message);
       }),

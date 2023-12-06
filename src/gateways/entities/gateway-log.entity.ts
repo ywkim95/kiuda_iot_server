@@ -1,7 +1,7 @@
-import { BaseLogModel } from 'src/common/entity/base-log.entity';
+import { BaseLogModel } from '../../common/entity/base-log.entity';
 import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne } from 'typeorm';
 import { formatStringAsThreeDigit } from '../const/format-string-as-three-digit.const';
-import { UsersModel } from 'src/users/entity/users.entity';
+import { UsersModel } from '../../users/entity/users.entity';
 import {
   IsBoolean,
   IsDate,
@@ -42,15 +42,15 @@ export class GatewaysLogModel extends BaseLogModel {
   @IsOptional()
   description?: string;
 
-  @Column({ comment: '기존 주파수' })
+  @Column({ type: 'double precision', comment: '기존 주파수' })
   @IsNumber()
   frequency: number;
 
-  @Column({ comment: '기존 TXPower' })
+  @Column({ type: 'double precision', comment: '기존 TXPower' })
   @IsNumber()
   txPower: number;
 
-  @Column({ comment: '기존 RFConfig' })
+  @Column({ type: 'double precision', comment: '기존 RFConfig' })
   @IsNumber()
   rfConfig: number;
 

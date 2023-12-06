@@ -16,6 +16,7 @@ import { UsersLogModel } from './entity/users-log.entity';
 import { Request } from 'express';
 import { UpdateUserPermissionDto } from './dto/update-user-permission.dto';
 import { AbstractDto } from './dto/abstract.dto';
+import wlogger from 'src/log/winston-logger.const';
 @Injectable()
 export class UsersService {
   constructor(
@@ -64,11 +65,31 @@ export class UsersService {
   }
 
   async getUserByEmail(email: string) {
-    return await this.usersRepository.findOne({
+    const user = await this.usersRepository.findOne({
       where: {
         email,
       },
     });
+
+    if (!user) {
+      throw new NotFoundException('요청한 유저의 정보가 없습니다.');
+    }
+
+    return user;
+  }
+
+  async getUserById(id: number) {
+    const user = await this.usersRepository.findOne({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('요청한 유저의 정보가 없습니다.');
+    }
+
+    return user;
   }
 
   async getAllUsers() {
@@ -155,6 +176,9 @@ export class UsersService {
     );
 
     if (!passwordMatches) {
+      wlogger.error(
+        `현재 비밀번호가 틀립니다. 시행한 계정의 이메일: ${dto.modifiedEmail}`,
+      );
       throw new BadRequestException('현재 비밀번호가 틀립니다.');
     }
 

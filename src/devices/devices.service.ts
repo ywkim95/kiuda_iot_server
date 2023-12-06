@@ -10,6 +10,10 @@ import { UsersModel } from '../users/entity/users.entity';
 import { isEqual } from 'lodash';
 import { DeviceEnum } from './const/deviceEnum.const';
 import { DevicesLogModel } from './entities/device-log.entity';
+import { GatewaysService } from 'src/gateways/gateways.service';
+import { ActionEnum } from 'src/common/const/action-enum.const';
+import wlogger from 'src/log/winston-logger.const';
+import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
 
 @Injectable()
 export class DevicesService {
@@ -19,6 +23,7 @@ export class DevicesService {
     @InjectRepository(DevicesLogModel)
     private readonly deviceLogRepository: Repository<DevicesLogModel>,
     private readonly commonService: CommonService,
+    private readonly gatewaysService: GatewaysService,
   ) {}
 
   // 기본 CRUD + 페이지네이션
@@ -41,11 +46,14 @@ export class DevicesService {
 
   // 등록
   async createDevice(dto: CreateDeviceDto, user: UsersModel) {
+    const gateway = await this.gatewaysService.getGatewayById(dto.gateway);
+
     const device = this.deviceRepository.create({
       ...dto,
+      gateway,
       createdBy: user.email,
-      updatedBy: user.email,
     });
+
     const newDevice = await this.deviceRepository.save(device);
 
     return newDevice;
@@ -64,13 +72,18 @@ export class DevicesService {
       },
     });
     if (!device) {
-      throw new NotFoundException();
+      wlogger.error(`해당 디바이스를 찾을 수 없습니다. id: ${id}`);
+      throw new NotFoundException(
+        `해당 디바이스를 찾을 수 없습니다. id: ${id}`,
+      );
     }
     return device;
   }
 
   // 수정
   async updateDeviceById(id: number, dto: UpdateDeviceDto, user: UsersModel) {
+    const gateway = await this.gatewaysService.getGatewayById(dto.gateway);
+
     const device = await this.getDeviceById(id);
 
     const comparisonData = {
@@ -84,6 +97,7 @@ export class DevicesService {
 
     const newDevice = {
       ...comparisonData,
+      gateway,
       updatedBy: user.email,
       updatedAt: new Date(),
     };
@@ -95,7 +109,11 @@ export class DevicesService {
        */
     }
 
-    const deviceLog = this.createDeviceLogModel(device, user.email);
+    const deviceLog = this.createDeviceLogModel(
+      device,
+      user.email,
+      ActionEnum.PATCH,
+    );
 
     await this.deviceLogRepository.save(deviceLog);
 
@@ -104,24 +122,24 @@ export class DevicesService {
 
   // 삭제
   async deleteDeviceById(id: number, user: UsersModel) {
-    const device = await this.deviceRepository.findOne({
-      where: {
-        id,
-      },
-    });
+    const device = await this.getDeviceById(id);
 
-    if (!device) {
-      throw new NotFoundException();
-    }
-
-    const deviceLog = this.createDeviceLogModel(device, user.email);
+    const deviceLog = this.createDeviceLogModel(
+      device,
+      user.email,
+      ActionEnum.DELETE,
+    );
 
     await this.deviceLogRepository.save(deviceLog);
 
     return await this.deviceRepository.delete(id);
   }
 
-  createDeviceLogModel(device: DevicesModel, userEmail: string) {
+  createDeviceLogModel(
+    device: DevicesModel,
+    userEmail: string,
+    actionType: ActionEnum,
+  ) {
     return this.deviceLogRepository.create({
       classify: device.classify,
       clientId: device.clientId,
@@ -135,6 +153,7 @@ export class DevicesService {
       resetYn: device.resetYn,
       statusCode: device.statusCode,
       useYn: device.useYn,
+      actionType,
     });
   }
 
@@ -177,8 +196,11 @@ export class DevicesService {
     });
 
     if (!device) {
+      wlogger.error(
+        `해당 디바이스를 찾을 수 없습니다. countryId: ${countryId}, areaId: ${areaId}, gatewayId: ${gatewayId}, clientId: ${clientId}`,
+      );
       throw new NotFoundException(
-        '해당하는 아이디를 가진 디바이스가 없습니다.',
+        `해당 디바이스를 찾을 수 없습니다. countryId: ${countryId}, areaId: ${areaId}, gatewayId: ${gatewayId}, clientId: ${clientId}`,
       );
     }
 
@@ -199,6 +221,9 @@ export class DevicesService {
       },
     });
     if (deviceList.length === 0) {
+      wlogger.error(
+        `요청한 게이트웨이에서 디바이스를 찾을 수 없습니다! id: ${gatewayId}`,
+      );
       throw new NotFoundException(
         `요청한 게이트웨이에서 디바이스를 찾을 수 없습니다! id: ${gatewayId}`,
       );
@@ -234,6 +259,7 @@ export class DevicesService {
       !sensorAndControllerDeviceUseYnList ||
       sensorAndControllerDeviceUseYnList.length === 0
     ) {
+      wlogger.error('해당 게이트웨이에 디바이스 정보가 없습니다.');
       throw new NotFoundException(
         '해당 게이트웨이에 디바이스 정보가 없습니다.',
       );
@@ -246,11 +272,29 @@ export class DevicesService {
     list: DevicesModel[],
     user: UsersModel,
   ) {
-    await Promise.all(
-      list.map((model) => {
-        const updateDevice: UpdateDeviceDto = { ...model };
-        return this.updateDeviceById(model.id, updateDevice, user);
-      }),
-    );
+    const newList = list.map(async (model) => {
+      const device = await this.deviceRepository.findOne({
+        where: {
+          id: model.id,
+        },
+        relations: {
+          gateway: true,
+        },
+      });
+
+      if (!device) {
+        wlogger.error('디바이스의 아이디를 다시 확인해주세요.');
+        throw new NotFoundException('디바이스의 아이디를 다시 확인해주세요.');
+      }
+
+      const updateDevice: UpdateDeviceDto = {
+        ...model,
+        gateway: device.gateway.id,
+      };
+
+      return await this.updateDeviceById(model.id, updateDevice, user);
+    });
+
+    return await Promise.all(newList);
   }
 }

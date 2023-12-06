@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -20,6 +21,7 @@ import { UpdateIdGatewayDto } from './dto/update-id-gateway.dto';
 import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
 import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
+import wlogger from 'src/log/winston-logger.const';
 
 @Controller('gateways')
 export class GatewaysController {
@@ -53,7 +55,14 @@ export class GatewaysController {
   @Post()
   @Roles(RolesEnum.ADMIN)
   async postGateway(@Body() body: CreateGatewayDto, @User() user: UsersModel) {
-    return await this.gatewaysService.createGateway(body, user);
+    const result = await this.gatewaysService.createGateway(body, user);
+
+    if (result.success) {
+      return await this.gatewaysService.getGatewayById(result.gateway.id);
+    } else {
+      wlogger.error('정확한 게이트웨이 정보를 넘겨주세요.');
+      throw new BadRequestException('정확한 게이트웨이 정보를 넘겨주세요.');
+    }
   }
 
   // 게이트웨이 수정

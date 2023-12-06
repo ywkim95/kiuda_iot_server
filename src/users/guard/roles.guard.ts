@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorator/roles.decorator';
+import wlogger from 'src/log/winston-logger.const';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -28,6 +29,9 @@ export class RolesGuard implements CanActivate {
     }
 
     if (user.roles !== requiredRole) {
+      wlogger.error(
+        `이 작업을 수행할 권한이 없습니다. ${requiredRole} 권한이 필요합니다.`,
+      );
       throw new ForbiddenException(
         `이 작업을 수행할 권한이 없습니다. ${requiredRole} 권한이 필요합니다.`,
       );
