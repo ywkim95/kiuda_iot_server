@@ -14,6 +14,7 @@ export class FirebaseAdminService {
   ) {}
 
   async getTokenList(user: UsersModel) {
+    console.log(user);
     let tokenList = await this.firebaseRepository.find({
       where: {
         user: {
@@ -21,6 +22,7 @@ export class FirebaseAdminService {
         },
       },
     });
+    console.log('tokenList', tokenList);
     if (tokenList.length === 0) {
       wlogger.error('유저가 가진 토큰이 없습니다.');
       throw new NotFoundException('유저가 가진 토큰이 없습니다.');
@@ -29,25 +31,30 @@ export class FirebaseAdminService {
   }
 
   async saveOrUpdateToken(user: UsersModel, token: string, clientInfo: string) {
-    let pushToken = await this.firebaseRepository.findOne({
-      where: {
-        user: {
-          id: user.id,
+    try {
+      let pushToken = await this.firebaseRepository.findOne({
+        where: {
+          user: {
+            id: user.id,
+          },
+          clientInfo,
         },
-        clientInfo,
-      },
-    });
-
-    if (pushToken) {
-      pushToken.token = token;
-    } else {
-      pushToken = this.firebaseRepository.create({
-        user,
-        clientInfo,
-        token,
       });
+
+      if (pushToken) {
+        pushToken.token = token;
+      } else {
+        pushToken = this.firebaseRepository.create({
+          user,
+          clientInfo,
+          token,
+        });
+      }
+      await this.firebaseRepository.save(pushToken);
+    } catch (error) {
+      wlogger.error(error);
+      console.log(error);
     }
-    await this.firebaseRepository.save(pushToken);
   }
 
   async cleanupOldTokens() {

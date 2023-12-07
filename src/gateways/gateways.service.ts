@@ -16,6 +16,7 @@ import { UsersService } from 'src/users/users.service';
 import { ActionEnum } from 'src/common/const/action-enum.const';
 import { JoinLoraDto } from 'src/real-time-data/dto/lora/join-lora.dto';
 import wlogger from 'src/log/winston-logger.const';
+import { QueryRunner as QR } from 'typeorm';
 @Injectable()
 export class GatewaysService {
   constructor(
@@ -32,6 +33,22 @@ export class GatewaysService {
      * 3. 게이트웨이 변경(일반정보 / 중요정보) 및 기록
      * 4. 게이트웨이 삭제
      */
+  }
+
+  // qr
+
+  // gateway qr
+  getGatewayRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<GatewaysModel>(GatewaysModel)
+      : this.gatewaysRepository;
+  }
+
+  // gatewayLog qr
+  getGatewayLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<GatewaysLogModel>(GatewaysLogModel)
+      : this.gatewaysLogRepository;
   }
 
   // CRUD + Pagination
@@ -69,17 +86,18 @@ export class GatewaysService {
   }
 
   // 등록
-  async createGateway(dto: CreateGatewayDto, user: UsersModel) {
+  async createGateway(dto: CreateGatewayDto, user: UsersModel, qr?: QR) {
+    const gatewayRepository = this.getGatewayRepository(qr);
     try {
       const owner = await this.usersService.getUserById(dto.owner);
 
-      const gateway = this.gatewaysRepository.create({
+      const gateway = gatewayRepository.create({
         ...dto,
         owner,
         createdBy: user.email,
       });
 
-      const newGateway = await this.gatewaysRepository.save(gateway);
+      const newGateway = await gatewayRepository.save(gateway);
 
       if (!newGateway) {
         return {
@@ -98,7 +116,15 @@ export class GatewaysService {
   }
 
   // 수정
-  async updateGatewayById(id: number, dto: UpdateGatewayDto, user: UsersModel) {
+  async updateGatewayById(
+    id: number,
+    dto: UpdateGatewayDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const gatewayRepository = this.getGatewayRepository(qr);
+
+    const gatewayLogRepository = this.getGatewayLogRepository(qr);
     try {
       const gateway = await this.getGatewayById(id);
 
@@ -118,29 +144,35 @@ export class GatewaysService {
         gateway,
         user.email,
         ActionEnum.PATCH,
+        gatewayLogRepository,
       );
 
-      await this.gatewaysLogRepository.save(gatewayLog);
+      await gatewayLogRepository.save(gatewayLog);
 
-      return await this.gatewaysRepository.save(newGateway);
+      return await gatewayRepository.save(newGateway);
     } catch (error) {
       console.log(error);
     }
   }
 
   // 삭제
-  async deleteGatewayById(id: number, user: UsersModel) {
+  async deleteGatewayById(id: number, user: UsersModel, qr?: QR) {
+    const gatewayRepository = this.getGatewayRepository(qr);
+
+    const gatewayLogRepository = this.getGatewayLogRepository(qr);
+
     const gateway = await this.getGatewayById(id);
 
     const gatewayLog = this.createGatewayLogModel(
       gateway,
       user.email,
       ActionEnum.DELETE,
+      gatewayLogRepository,
     );
 
-    await this.gatewaysLogRepository.save(gatewayLog);
+    await gatewayLogRepository.save(gatewayLog);
 
-    return await this.gatewaysRepository.delete(id);
+    return await gatewayRepository.delete(id);
   }
 
   // ------------------------------------------------------------------------
@@ -156,7 +188,16 @@ export class GatewaysService {
   }
 
   // 게이트웨이 주소(id) 변경
-  async updateGatewayId(id: number, dto: UpdateIdGatewayDto, user: UsersModel) {
+  async updateGatewayId(
+    id: number,
+    dto: UpdateIdGatewayDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const gatewayRepository = this.getGatewayRepository(qr);
+
+    const gatewayLogRepository = this.getGatewayLogRepository(qr);
+
     const gateway = await this.getGatewayById(id);
 
     const comparisonData = {
@@ -179,15 +220,25 @@ export class GatewaysService {
       gateway,
       user.email,
       ActionEnum.PATCH,
+      gatewayLogRepository,
     );
 
-    await this.gatewaysLogRepository.save(gatewayLog);
+    await gatewayLogRepository.save(gatewayLog);
 
-    return await this.gatewaysRepository.save(newGateway);
+    return await gatewayRepository.save(newGateway);
   }
 
   // 게이트웨이 ssid 변경
-  async updateSsid(id: number, dto: UpdateSsidGatewayDto, user: UsersModel) {
+  async updateSsid(
+    id: number,
+    dto: UpdateSsidGatewayDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const gatewayRepository = this.getGatewayRepository(qr);
+
+    const gatewayLogRepository = this.getGatewayLogRepository(qr);
+
     const gateway = await this.getGatewayById(id);
 
     const comparisonData = {
@@ -209,11 +260,12 @@ export class GatewaysService {
       gateway,
       user.email,
       ActionEnum.PATCH,
+      gatewayLogRepository,
     );
 
-    await this.gatewaysLogRepository.save(gatewayLog);
+    await gatewayLogRepository.save(gatewayLog);
 
-    return await this.gatewaysRepository.save(newGateway);
+    return await gatewayRepository.save(newGateway);
   }
 
   // 게이트웨이 주파수 변경
@@ -221,7 +273,12 @@ export class GatewaysService {
     id: number,
     dto: UpdateFrequencyGatewayDto,
     user: UsersModel,
+    qr?: QR,
   ) {
+    const gatewayRepository = this.getGatewayRepository(qr);
+
+    const gatewayLogRepository = this.getGatewayLogRepository(qr);
+
     const gateway = await this.getGatewayById(id);
 
     const comparisonData = {
@@ -243,11 +300,12 @@ export class GatewaysService {
       gateway,
       user.email,
       ActionEnum.PATCH,
+      gatewayLogRepository,
     );
 
-    await this.gatewaysLogRepository.save(gatewayLog);
+    await gatewayLogRepository.save(gatewayLog);
 
-    return await this.gatewaysRepository.save(newGateway);
+    return await gatewayRepository.save(newGateway);
   }
 
   // 게이트웨이 아이디를 통한 디바이스 리스트 반환
@@ -280,8 +338,9 @@ export class GatewaysService {
     gateway: GatewaysModel,
     userEmail: string,
     actionType: ActionEnum,
+    gatewayLogRepository: Repository<GatewaysLogModel>,
   ) {
-    return this.gatewaysLogRepository.create({
+    return gatewayLogRepository.create({
       modelId: gateway.id,
       countryId: gateway.countryId,
       areaId: gateway.areaId,

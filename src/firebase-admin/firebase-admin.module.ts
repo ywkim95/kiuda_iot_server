@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FirebaseModel } from './entities/firebase.entity';
 import { FirebaseNotificationService } from './firebase-notification.service';
 import { TokenCleanupService } from './firebase-clean-up.service';
+import { FirebaseAdminController } from './firebase-admin.controller';
 @Module({
   imports: [TypeOrmModule.forFeature([FirebaseModel])],
   exports: [
@@ -12,6 +13,7 @@ import { TokenCleanupService } from './firebase-clean-up.service';
     FirebaseNotificationService,
     FirebaseAdminService,
   ],
+  controllers: [FirebaseAdminController],
   providers: [
     FirebaseAdminService,
     FirebaseNotificationService,

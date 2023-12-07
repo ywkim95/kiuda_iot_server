@@ -1,16 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ContDeviceService } from 'src/controllers/device/device-controller.service';
 import { DevicesService } from 'src/devices/devices.service';
-import { GatewaysService } from 'src/gateways/gateways.service';
 import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
 import { Setting } from './type/setting.type';
 import { UsersModel } from 'src/users/entity/users.entity';
-import { isEqual } from 'lodash';
 import { ContDeviceModel } from 'src/controllers/device/entities/devices-controller.entity';
 import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
 import { DevicesModel } from 'src/devices/entities/device.entity';
 import wlogger from 'src/log/winston-logger.const';
-
+import { QueryRunner as QR } from 'typeorm';
 type modelList = ContDeviceModel[] | SensorDeviceModel[] | DevicesModel[];
 
 @Injectable()
@@ -65,7 +63,12 @@ export class SettingsService {
     return setting;
   }
 
-  async updateSetting(gatewayId: number, setting: Setting, user: UsersModel) {
+  async updateSetting(
+    gatewayId: number,
+    setting: Setting,
+    user: UsersModel,
+    qr?: QR,
+  ) {
     const currentSetting = await this.getSettingValueList(gatewayId);
 
     console.log(setting.useYnList.length === currentSetting.useYnList.length);
@@ -87,18 +90,21 @@ export class SettingsService {
       await this.contDeviceService.updateContDeviceAndUserCustomValueList(
         setting.controllerList,
         user,
+        qr,
       );
 
     const b =
       await this.sensorDeviceService.updateSensorDeviceRangeAndCorrectValueList(
         setting.sensorList,
         user,
+        qr,
       );
 
     const c =
       await this.devicesService.updateSensorAndControllerDeviceUseYnList(
         setting.useYnList,
         user,
+        qr,
       );
 
     return true;

@@ -182,81 +182,119 @@ export class RealTimeDataSaveService {
 
   // 평균데이터 모델생성
   createAverageModel<T extends AbstractAverageModel>(type: TimeUnitEnum): T {
-    switch (type) {
-      case TimeUnitEnum.MINUTE:
-        return new FiveMinutesAverageModel() as T;
-      case TimeUnitEnum.DAILY:
-        return new DailyAverageModel() as T;
-      case TimeUnitEnum.MONTHLY:
-        return new MonthlyAverageModel() as T;
-      default:
-        wlogger.error('정확한 타입을 지정해주세요.');
-        throw new TypeError('정확한 타입을 지정해주세요.');
+    try {
+      switch (type) {
+        case TimeUnitEnum.MINUTE:
+          return new FiveMinutesAverageModel() as T;
+        case TimeUnitEnum.DAILY:
+          return new DailyAverageModel() as T;
+        case TimeUnitEnum.MONTHLY:
+          return new MonthlyAverageModel() as T;
+        default:
+          wlogger.error('정확한 타입을 지정해주세요.');
+          throw new TypeError('정확한 타입을 지정해주세요.');
+      }
+    } catch (error) {
+      wlogger.error(error);
+      console.log(error);
     }
   }
 
   // 모델 별 최소, 최대, 평균, 데이터 수 계산
   async processSensorData<T extends AbstractAverageModel>(
-    sensorId: number,
+    deviceId: number,
     times: TimeUnitEnum,
   ): Promise<T> {
-    const allSensorData = await this.getSensorData(sensorId);
-    let averageModel: T = this.createAverageModel(times);
+    try {
+      console.log(deviceId);
+      const allSensorData = await this.getSensorDataList(deviceId);
+      let averageModel: T = this.createAverageModel(times);
 
-    averageModel.device = allSensorData[0]?.device;
+      console.log(allSensorData);
+      averageModel.device = allSensorData[0]?.device;
 
-    for (let i = 1; i <= 20; i++) {
-      // 평균값 계산
-      let sum = 0;
-      let min = Number.MAX_VALUE;
-      let max = Number.MIN_VALUE;
-      let count = 0;
+      for (let i = 1; i <= 20; i++) {
+        // 평균값 계산
+        let sum = 0;
+        let min = Number.MAX_VALUE;
+        let max = Number.MIN_VALUE;
+        let count = 0;
 
-      for (const data of allSensorData) {
-        const sensorValue = data[`s${i}`];
-        if (sensorValue !== undefined) {
-          sum += sensorValue;
-          min = Math.min(min, sensorValue);
-          max = Math.max(max, sensorValue);
-          count++;
+        for (const data of allSensorData) {
+          const sensorValue = data[`s${i}`];
+          if (sensorValue !== undefined) {
+            sum += sensorValue;
+            min = Math.min(min, sensorValue);
+            max = Math.max(max, sensorValue);
+            count++;
+          }
+        }
+        if (min === Number.MAX_VALUE) {
+          min = 0;
+        }
+        if (max === Number.MIN_VALUE) {
+          max = 0;
+        }
+
+        const average = count > 0 ? sum / count : 0;
+        if (min !== 0 || max !== 0 || average !== 0) {
+          averageModel[`s${i}`] = { min, max, average };
         }
       }
 
-      const average = count > 0 ? sum / count : 0;
-      averageModel[`s${i}`] = { min, max, average };
+      // 시작시간 종료시간 총 데이터 수
+      if (times === TimeUnitEnum.MINUTE) {
+        averageModel.startDate =
+          allSensorData[0]?.createdAt ?? new Date(Date.now() - 5 * 60 * 1000);
+      } else if (times === TimeUnitEnum.DAILY) {
+        averageModel.startDate =
+          allSensorData[0]?.createdAt ??
+          new Date(Date.now() - 24 * 60 * 60 * 1000);
+      } else if (times === TimeUnitEnum.MONTHLY) {
+        averageModel.startDate =
+          allSensorData[0]?.createdAt ??
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      }
+
+      averageModel.endDate =
+        allSensorData[allSensorData.length - 1]?.createdAt ?? new Date();
+      averageModel.dataCount = allSensorData.length;
+      averageModel.createdAt = new Date();
+
+      return averageModel;
+    } catch (error) {
+      wlogger.error(error);
+      console.log(error);
     }
-
-    // 시작시간 종료시간 총 데이터 수
-    averageModel.startDate = allSensorData[0].createdAt;
-    averageModel.endDate = allSensorData[allSensorData.length - 1].createdAt;
-    averageModel.dataCount = allSensorData.length;
-
-    return averageModel;
   }
 
   // 실시간 센서 데이터 가져오기
-  private async getSensorData(
-    sensorId: number,
+  private async getSensorDataList(
+    id: number,
   ): Promise<SensorRealTimeDataModel[]> {
     const fiveMinuteAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return this.realtimeSensorsRepository.find({
+    console.log(new Date());
+    console.log(fiveMinuteAgo);
+    const dataList = await this.realtimeSensorsRepository.find({
       where: {
-        device: {
-          id: sensorId,
-        },
+        device: { id },
         createdAt: MoreThan(fiveMinuteAgo),
       },
       relations: {
         device: true,
       },
     });
+    console.log(dataList);
+    return dataList;
   }
+  //
 
   // 평균데이터 저장
   private async saveAverageModels<T extends AbstractAverageModel>(
     averageModels: T[],
     repository: Repository<T>,
   ) {
-    await Promise.all(averageModels.map((model) => repository.save(model)));
+    const dataList = averageModels.map((model) => repository.save(model));
+    await Promise.all(dataList);
   }
 }

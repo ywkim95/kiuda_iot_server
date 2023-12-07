@@ -246,4 +246,20 @@ export class UsersService {
     }
     return ip;
   }
+
+  async getUserByGatewayId(gatewayId: number) {
+    const user = await this.usersRepository.findOne({
+      where: {
+        gateways: {
+          id: gatewayId,
+        },
+      },
+    });
+    if (!user) {
+      wlogger.error('해당 유저가 존재하지 않습니다.');
+      throw new NotFoundException('해당 유저가 존재하지 않습니다.');
+    }
+
+    return user;
+  }
 }

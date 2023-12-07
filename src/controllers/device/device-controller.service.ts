@@ -26,7 +26,7 @@ import { ContSpecService } from '../specifications/specifications-controller.ser
 import { ActionEnum } from 'src/common/const/action-enum.const';
 import { RangeUpdateType } from 'src/sensors/device/const/range-update-type-enum.const';
 import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
-
+import { QueryRunner as QR } from 'typeorm';
 @Injectable()
 export class ContDeviceService {
   constructor(
@@ -49,6 +49,54 @@ export class ContDeviceService {
     private readonly sensorDeviceService: SensorDeviceService,
   ) {}
 
+  // query runner
+
+  // contDevice qr
+  getContDeviceRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContDeviceModel>(ContDeviceModel)
+      : this.deviceControllersRepository;
+  }
+
+  // contDeviceLog qr
+  getContDeviceLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContDeviceLogModel>(ContDeviceLogModel)
+      : this.deviceControllersLogRepository;
+  }
+
+  // userCustomValue qr
+  getUserCustomValueRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<UserCustomValueModel>(UserCustomValueModel)
+      : this.userCustomValueRepository;
+  }
+  // userCustomValue Log qr
+  getUserCustomValueLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<UserCustomValueLogModel>(
+          UserCustomValueLogModel,
+        )
+      : this.userCustomValueLogRepository;
+  }
+
+  // customSettingValue qr
+  getCustomSettingValueRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<CustomSettingRangeModel>(
+          CustomSettingRangeModel,
+        )
+      : this.customSettingRangeRepository;
+  }
+  // customSettingValue Log qr
+  getCustomSettingValueLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<CustomSettingRangeLogModel>(
+          CustomSettingRangeLogModel,
+        )
+      : this.customSettingRangeLogRepository;
+  }
+
   // 페이지네이션
   async paginateDeviceControllers(dto: ContDevicePaginateDto) {
     return await this.commonService.paginate(
@@ -67,7 +115,18 @@ export class ContDeviceService {
   }
 
   // 등록
-  async createDeviceController(dto: CreateContDeviceDto, user: UsersModel) {
+  async createDeviceController(
+    dto: CreateContDeviceDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const contDeviceRepository = this.getContDeviceRepository(qr);
+
+    const userCustomValueRepository = this.getUserCustomValueRepository(qr);
+
+    const customSettingValueRepository =
+      this.getCustomSettingValueRepository(qr);
+
     const device = await this.devicesService.getDeviceById(dto.device);
 
     const specification =
@@ -75,26 +134,25 @@ export class ContDeviceService {
         dto.specification,
       );
 
-    const contDevice = this.deviceControllersRepository.create({
+    const contDevice = contDeviceRepository.create({
       ...dto,
       device,
       specification,
       createdBy: user.email,
     });
 
-    const newContDevice =
-      await this.deviceControllersRepository.save(contDevice);
+    const newContDevice = await contDeviceRepository.save(contDevice);
 
     if (dto.userCustomValues && dto.userCustomValues.length > 0) {
       const userCustomValues = dto.userCustomValues.map((customValue) => {
-        return this.userCustomValueRepository.create({
+        return userCustomValueRepository.create({
           ...customValue,
           contDevice: newContDevice,
           createdBy: user.email,
         });
       });
       const newUserCustomValues =
-        await this.userCustomValueRepository.save(userCustomValues);
+        await userCustomValueRepository.save(userCustomValues);
 
       // 여기부터 유저커스텀밸류에 의한 세팅레인지 만들기
       const sensor = await this.sensorDeviceService.getDeviceSensorById(
@@ -108,7 +166,7 @@ export class ContDeviceService {
               : newUserCustomValues[index - 1].manualValue + 0.1;
           const sensorRangeEnd = newUserCustomValues[index].manualValue;
 
-          return this.customSettingRangeRepository.create({
+          return customSettingValueRepository.create({
             contDevice: newContDevice,
             controllerValue:
               newContDevice.specification.specificationSteps[index]?.value,
@@ -119,7 +177,7 @@ export class ContDeviceService {
         });
 
       customSettingRanges.push(
-        this.customSettingRangeRepository.create({
+        customSettingValueRepository.create({
           contDevice: newContDevice,
           controllerValue:
             newContDevice.specification.specificationSteps[
@@ -132,7 +190,7 @@ export class ContDeviceService {
           createdBy: user.email,
         }),
       );
-      await this.customSettingRangeRepository.save(customSettingRanges);
+      await customSettingValueRepository.save(customSettingRanges);
     }
 
     return true;
@@ -172,7 +230,12 @@ export class ContDeviceService {
     id: number,
     dto: UpdateContDeviceDto,
     user: UsersModel,
+    qr?: QR,
   ) {
+    const contDeviceRepository = this.getContDeviceRepository(qr);
+
+    const contDeviceLogRepository = this.getContDeviceLogRepository(qr);
+
     // 제어 디바이스 호출
     const contDevice = await this.getDeviceControllerById(id);
 
@@ -207,7 +270,7 @@ export class ContDeviceService {
     };
 
     // 제어 디바이스 저장
-    await this.deviceControllersRepository.save(newContDevice);
+    await contDeviceRepository.save(newContDevice);
 
     // 유저 커스텀 밸류가 있는 경우
     if (dto.userCustomValues) {
@@ -217,6 +280,7 @@ export class ContDeviceService {
         contDevice,
         user,
         id,
+        qr,
       );
     }
 
@@ -225,22 +289,39 @@ export class ContDeviceService {
       contDevice,
       user.email,
       ActionEnum.PATCH,
+      contDeviceLogRepository,
     );
 
-    await this.deviceControllersLogRepository.save(deviceLog);
+    await contDeviceLogRepository.save(deviceLog);
 
     return await this.getDeviceControllerById(id);
   }
 
   // 삭제
-  async deleteDeviceControllerById(id: number, user: UsersModel) {
+  async deleteDeviceControllerById(id: number, user: UsersModel, qr?: QR) {
     try {
+      const contDeviceRepository = this.getContDeviceRepository(qr);
+
+      const contDeviceLogRepository = this.getContDeviceLogRepository(qr);
+
+      const userCustomValueRepository = this.getUserCustomValueRepository(qr);
+
+      const userCustomValueLogRepository =
+        this.getUserCustomValueLogRepository(qr);
+
+      const customSettingRangeRepository =
+        this.getCustomSettingValueRepository(qr);
+
+      const customSettingRangeLogRepository =
+        this.getCustomSettingValueLogRepository(qr);
+
       const contDevice = await this.getDeviceControllerById(id);
 
       const deviceLog = this.createContDeviceLogModel(
         contDevice,
         user.email,
         ActionEnum.DELETE,
+        contDeviceLogRepository,
       );
 
       const customLogs = contDevice.userCustomValues.map((value) =>
@@ -249,6 +330,7 @@ export class ContDeviceService {
           value,
           user.email,
           ActionEnum.DELETE,
+          userCustomValueLogRepository,
         ),
       );
 
@@ -258,24 +340,25 @@ export class ContDeviceService {
           range,
           user.email,
           ActionEnum.DELETE,
+          customSettingRangeLogRepository,
         ),
       );
 
       Promise.all([
-        await this.userCustomValueLogRepository.save(customLogs),
-        await this.customSettingRangeLogRepository.save(rangeLogs),
-        await this.deviceControllersLogRepository.save(deviceLog),
+        await userCustomValueLogRepository.save(customLogs),
+        await customSettingRangeLogRepository.save(rangeLogs),
+        await contDeviceLogRepository.save(deviceLog),
       ]);
 
-      await this.customSettingRangeRepository.delete({
+      await customSettingRangeRepository.delete({
         contDevice: { id: contDevice.id },
       });
 
-      await this.userCustomValueRepository.delete({
+      await userCustomValueRepository.delete({
         contDevice: { id: contDevice.id },
       });
 
-      await this.deviceControllersRepository.delete(id);
+      await contDeviceRepository.delete(id);
 
       return true;
     } catch (error) {
@@ -291,8 +374,9 @@ export class ContDeviceService {
     contDevice: ContDeviceModel,
     userEmail: string,
     actionType: ActionEnum,
+    contDeviceLogRepository: Repository<ContDeviceLogModel>,
   ) {
-    return this.deviceControllersLogRepository.create({
+    return contDeviceLogRepository.create({
       name: contDevice.name,
       varName: contDevice.varName,
       connectedDeviceId: contDevice.connectedDeviceId,
@@ -313,8 +397,9 @@ export class ContDeviceService {
     value: UserCustomValueModel,
     userEmail: string,
     actionType: ActionEnum,
+    userCustomValueLogRepository: Repository<UserCustomValueLogModel>,
   ) {
-    return this.userCustomValueLogRepository.create({
+    return userCustomValueLogRepository.create({
       contDeviceId: contDevice.id,
       gab: value.gab,
       manualValue: value.manualValue,
@@ -331,8 +416,9 @@ export class ContDeviceService {
     range: CustomSettingRangeModel,
     userEmail: string,
     actionType: ActionEnum,
+    customSettingRangeLogRepository: Repository<CustomSettingRangeLogModel>,
   ) {
-    return this.customSettingRangeLogRepository.create({
+    return customSettingRangeLogRepository.create({
       contDeviceId: contDevice.id,
       controllerValue: range.controllerValue,
       modelId: range.id,
@@ -374,6 +460,7 @@ export class ContDeviceService {
   async updateContDeviceAndUserCustomValueList(
     list: ContDeviceModel[],
     user: UsersModel,
+    qr?: QR,
   ) {
     console.log(list);
     const newList = list.map(async (model) => {
@@ -403,6 +490,7 @@ export class ContDeviceService {
         model.id,
         updateContDevice,
         user,
+        qr,
       );
     });
     return await Promise.all(newList);
@@ -413,11 +501,23 @@ export class ContDeviceService {
     contDevice: ContDeviceModel,
     user: UsersModel,
     id: number,
+    qr?: QR,
   ) {
+    const userCustomValueRepository = this.getUserCustomValueRepository(qr);
+
+    const userCustomValueLogRepository =
+      this.getUserCustomValueLogRepository(qr);
+
+    const customSettingRangeRepository =
+      this.getCustomSettingValueRepository(qr);
+
+    const customSettingRangeLogRepository =
+      this.getCustomSettingValueLogRepository(qr);
+
     // 유저 커스텀 밸류 업데이트
     for (const customValue of dto.userCustomValues) {
       try {
-        let value = await this.userCustomValueRepository.findOne({
+        let value = await userCustomValueRepository.findOne({
           where: {
             id: customValue.id,
             contDevice: { id: contDevice.id },
@@ -433,7 +533,7 @@ export class ContDeviceService {
             updatedAt: new Date(),
           };
 
-          await this.userCustomValueRepository.save(updatedValue);
+          await userCustomValueRepository.save(updatedValue);
 
           // 로그 생성
           const customLog = this.createUserCustomValueLogModel(
@@ -441,18 +541,19 @@ export class ContDeviceService {
             value,
             user.email,
             ActionEnum.PATCH,
+            userCustomValueLogRepository,
           );
 
-          await this.userCustomValueLogRepository.save(customLog);
+          await userCustomValueLogRepository.save(customLog);
         } else {
           // 없다면 새로운 모델 생성 및 저장
-          const newValue = this.userCustomValueRepository.create({
+          const newValue = userCustomValueRepository.create({
             ...customValue,
             contDevice: contDevice,
             createdBy: user.email,
           });
 
-          await this.userCustomValueRepository.save(newValue);
+          await userCustomValueRepository.save(newValue);
         }
       } catch (error) {
         console.error('Error updating custom value:', error);
@@ -518,13 +619,14 @@ export class ContDeviceService {
             oldRange,
             user.email,
             ActionEnum.PATCH,
+            customSettingRangeLogRepository,
           );
 
           // 로그 저장
-          await this.customSettingRangeLogRepository.save(rangeLog);
+          await customSettingRangeLogRepository.save(rangeLog);
 
           // 값 저장
-          await this.customSettingRangeRepository.save(customSettingRange);
+          await customSettingRangeRepository.save(customSettingRange);
         } catch (error) {
           console.error('Error updating custom setting range:', error);
           wlogger.error('Error updating custom setting range:', error);
@@ -542,8 +644,16 @@ export class ContDeviceService {
     model: SensorDeviceModel,
     type: RangeUpdateType,
     userEmail: string,
+    qr?: QR,
   ) {
-    const contDeviceList = await this.deviceControllersRepository.find({
+    const contDeviceRepository = this.getContDeviceRepository(qr);
+    const customSettingRangeRepository =
+      this.getCustomSettingValueRepository(qr);
+
+    const customSettingRangeLogRepository =
+      this.getCustomSettingValueLogRepository(qr);
+
+    const contDeviceList = await contDeviceRepository.find({
       where: {
         mappingSensorId: model.id,
       },
@@ -588,11 +698,12 @@ export class ContDeviceService {
             contDeviceList[i].customSettingRanges[0],
             userEmail,
             ActionEnum.PATCH,
+            customSettingRangeLogRepository,
           );
 
-          await this.customSettingRangeLogRepository.save(rangeLog);
+          await customSettingRangeLogRepository.save(rangeLog);
 
-          await this.customSettingRangeRepository.save(ranges[0]);
+          await customSettingRangeRepository.save(ranges[0]);
         }
 
         if (type === RangeUpdateType.END) {
@@ -611,13 +722,12 @@ export class ContDeviceService {
             ],
             userEmail,
             ActionEnum.PATCH,
+            customSettingRangeLogRepository,
           );
 
-          await this.customSettingRangeLogRepository.save(rangeLog);
+          await customSettingRangeLogRepository.save(rangeLog);
 
-          await this.customSettingRangeRepository.save(
-            ranges[ranges.length - 1],
-          );
+          await customSettingRangeRepository.save(ranges[ranges.length - 1]);
         }
       }
     }

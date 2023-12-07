@@ -22,6 +22,7 @@ import { AccumulatedIrradianceModel } from './entities/accumulate/accumulated-ir
 import { GatewaysService } from 'src/gateways/gateways.service';
 import { JoinLoraDto } from './dto/lora/join-lora.dto';
 import wlogger from 'src/log/winston-logger.const';
+import { UsersService } from 'src/users/users.service';
 
 type Data = {
   ghid: string;
@@ -39,6 +40,7 @@ export class RealTimeDataService {
     private readonly realtimeControllersRepository: Repository<ContRealTimeDataModel>,
     @InjectRepository(AccumulatedIrradianceModel)
     private readonly accumulatedIrradianceRepository: Repository<AccumulatedIrradianceModel>,
+    private readonly usersService: UsersService,
     private readonly gatewayService: GatewaysService,
     private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
@@ -71,7 +73,7 @@ export class RealTimeDataService {
      * 뭐 일련의 과정을 거쳐서 <- 여기는 일련의 과정이 없네
      * validateData로 던진다.
      */
-    const isSensor = parseInt(dto['cid'].toString()) % 2 === 0;
+    const isSensor = parseInt(dto['cid'].toString()) % 2 === 1;
 
     const data = await this.branchData(dto, isSensor);
 
@@ -107,7 +109,11 @@ export class RealTimeDataService {
         dto.gid,
         dto.cid,
       );
-      const user = device.gateway.owner;
+
+      const user = await this.usersService.getUserByGatewayId(
+        device.gateway.id,
+      );
+
       const sensorDeviceList = device.sensors;
 
       await this.validateAndNotify(sensorDeviceList, dto, user);
@@ -115,7 +121,9 @@ export class RealTimeDataService {
       const data = this.realtimeSensorsRepository.create({ ...dto, device });
       await this.realtimeSensorsRepository.save(data);
 
-      await this.saveAccumulateData(dto.s5, device.id);
+      if (dto.s5) {
+        await this.saveAccumulateData(dto.s5, device.id);
+      }
 
       const returnData: Data = {
         ghid: dto.ghid,
@@ -141,15 +149,22 @@ export class RealTimeDataService {
     const notificationPromises = sensorDeviceList.map(
       async (sensorDevice, index) => {
         const data = dto[`s${index + 1}`];
-        const message = await this.validateSensorData(sensorDevice, data);
 
-        if (message) {
-          await this.notiService.registerNotification(
-            sensorDevice.device.name,
-            message,
-            user,
-            sensorDevice.device,
-          );
+        if (data) {
+          const message = await this.validateSensorData(sensorDevice, data);
+          if (message) {
+            const device = (
+              await this.sensorDeviceService.getDeviceSensorById(
+                sensorDevice.id,
+              )
+            ).device;
+            await this.notiService.registerNotification(
+              device.name,
+              message,
+              user,
+              device,
+            );
+          }
         }
       },
     );
@@ -162,17 +177,19 @@ export class RealTimeDataService {
     sensorDevice: SensorDeviceModel,
     data: number,
   ): Promise<string | null> {
-    const sensorSpec = sensorDevice.spec;
+    const sensorDeviceExtends =
+      await this.sensorDeviceService.getDeviceSensorById(sensorDevice.id);
+    const sensorSpec = sensorDeviceExtends.spec;
     let message = null;
 
-    if (data > sensorSpec.lowWarningStart && data <= sensorSpec.lowWarningEnd) {
+    if (data <= sensorSpec.lowWarningEnd) {
       message = sentence(sensorDevice.name, WarningEnum.LOW, data);
     } else if (
       data > sensorSpec.highWarningStart &&
       data <= sensorSpec.highWarningEnd
     ) {
       message = sentence(sensorDevice.name, WarningEnum.HIGH, data);
-    } else if (data > sensorSpec.dangerStart && data <= sensorSpec.dangerEnd) {
+    } else if (data > sensorSpec.dangerStart) {
       message = sentence(sensorDevice.name, WarningEnum.DANGER, data);
     }
 
@@ -220,11 +237,14 @@ export class RealTimeDataService {
         date: today,
         deviceId,
         dataCount: 0,
+        accumulatedIrradiance: 0,
       });
     }
 
     currentIrradiance.dataCount += 1;
-    currentIrradiance.accumulatedIrradiance += onceIrradiance;
+    currentIrradiance.accumulatedIrradiance =
+      parseFloat(currentIrradiance.accumulatedIrradiance.toString()) +
+      parseFloat(onceIrradiance.toString());
 
     await this.accumulatedIrradianceRepository.save(currentIrradiance);
   }

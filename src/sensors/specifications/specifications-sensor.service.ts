@@ -11,8 +11,7 @@ import { isEqual } from 'lodash';
 import { SensorSpecLogModel } from './entities/specifications-sensor-log.entity';
 import wlogger from 'src/log/winston-logger.const';
 import { ActionEnum } from 'src/common/const/action-enum.const';
-import { SensorDeviceModel } from '../device/entities/device-sensor.entity';
-
+import { QueryRunner as QR } from 'typeorm';
 @Injectable()
 export class SensorSpecService {
   constructor(
@@ -22,6 +21,22 @@ export class SensorSpecService {
     private readonly sensorSpecificationLogRepository: Repository<SensorSpecLogModel>,
     private readonly commonService: CommonService,
   ) {}
+
+  // qr
+
+  // sensorSpec qr
+  getSensorSpecRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<SensorSpecModel>(SensorSpecModel)
+      : this.sensorSpecificationsRepository;
+  }
+
+  // sensorSpecLog qr
+  getSensorSpecLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<SensorSpecLogModel>(SensorSpecLogModel)
+      : this.sensorSpecificationLogRepository;
+  }
 
   // 제원 정보
 
@@ -55,14 +70,19 @@ export class SensorSpecService {
   }
 
   // 등록
-  async createSpecification(dto: CreateSensorSpecDto, user: UsersModel) {
-    const spec = this.sensorSpecificationsRepository.create({
+  async createSpecification(
+    dto: CreateSensorSpecDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const specRepository = this.getSensorSpecRepository(qr);
+    const spec = specRepository.create({
       ...dto,
       createdBy: user.email,
       updatedBy: user.email,
     });
 
-    const newSpec = await this.sensorSpecificationsRepository.save(spec);
+    const newSpec = await specRepository.save(spec);
 
     return newSpec;
   }
@@ -72,7 +92,10 @@ export class SensorSpecService {
     id: number,
     dto: UpdateSensorSpecDto,
     user: UsersModel,
+    qr?: QR,
   ) {
+    const specRepository = this.getSensorSpecRepository(qr);
+    const specLogRepository = this.getSensorSpecLogRepository(qr);
     const spec = await this.getSensorSpecificationById(id);
 
     const comparisonData = {
@@ -94,26 +117,30 @@ export class SensorSpecService {
       spec,
       user.email,
       ActionEnum.PATCH,
+      specLogRepository,
     );
 
-    await this.sensorSpecificationLogRepository.save(specLog);
+    await specLogRepository.save(specLog);
 
-    return await this.sensorSpecificationsRepository.save(newSpec);
+    return await specRepository.save(newSpec);
   }
 
   // 삭제
-  async deleteSpecificationById(id: number, user: UsersModel) {
+  async deleteSpecificationById(id: number, user: UsersModel, qr?: QR) {
+    const specRepository = this.getSensorSpecRepository(qr);
+    const specLogRepository = this.getSensorSpecLogRepository(qr);
     const spec = await this.getSensorSpecificationById(id);
 
     const specLog = this.createSensorSpecLogModel(
       spec,
       user.email,
       ActionEnum.DELETE,
+      specLogRepository,
     );
 
-    await this.sensorSpecificationLogRepository.save(specLog);
+    await specLogRepository.save(specLog);
 
-    return await this.sensorSpecificationsRepository.delete(id);
+    return await specRepository.delete(id);
   }
 
   // ------------------------------------------------------------------
@@ -123,8 +150,9 @@ export class SensorSpecService {
     sensorSpec: SensorSpecModel,
     userEamil: string,
     actionType: ActionEnum,
+    sensorSpecLogRepository: Repository<SensorSpecLogModel>,
   ) {
-    return this.sensorSpecificationLogRepository.create({
+    return sensorSpecLogRepository.create({
       name: sensorSpec.name,
       varName: sensorSpec.varName,
       stableStart: sensorSpec.stableStart,

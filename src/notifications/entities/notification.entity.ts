@@ -2,8 +2,9 @@ import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
 import { BaseModel } from '../../common/entity/base.entity';
 import { DevicesModel } from '../../devices/entities/device.entity';
 import { UsersModel } from '../../users/entity/users.entity';
-import { Column, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 
+@Entity()
 export class NotificationModel extends BaseModel {
   @Column({ comment: '확인 여부', default: false })
   @IsBoolean()

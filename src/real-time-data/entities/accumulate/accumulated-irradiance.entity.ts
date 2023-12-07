@@ -22,7 +22,7 @@ export class AccumulatedIrradianceModel {
   @IsNumber()
   dataCount: number;
 
-  @Column({ comment: '누적 일사량' })
+  @Column({ type: 'double precision', comment: '누적 일사량' })
   @IsNumber()
   accumulatedIrradiance: number;
 

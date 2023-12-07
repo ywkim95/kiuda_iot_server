@@ -20,7 +20,8 @@ import { SensorDeviceLogModel } from './entities/device-sensor-log.entity';
 import wlogger from 'src/log/winston-logger.const';
 import { ContDeviceService } from 'src/controllers/device/device-controller.service';
 import { RangeUpdateType } from './const/range-update-type-enum.const';
-
+import { QueryRunner as QR } from 'typeorm';
+import { ActionEnum } from 'src/common/const/action-enum.const';
 @Injectable()
 export class SensorDeviceService {
   constructor(
@@ -34,6 +35,22 @@ export class SensorDeviceService {
     @Inject(forwardRef(() => ContDeviceService))
     private readonly contDeviceService: ContDeviceService,
   ) {}
+
+  // qr
+
+  // sensorDevice qr
+  getSensorDeviceRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<SensorDeviceModel>(SensorDeviceModel)
+      : this.deviceSensorRepository;
+  }
+
+  // sensorDeviceLog qr
+  getSensorDeviceLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<SensorDeviceLogModel>(SensorDeviceLogModel)
+      : this.deviceSensorLogRepository;
+  }
 
   // 실기기
 
@@ -77,19 +94,25 @@ export class SensorDeviceService {
   }
 
   // 등록
-  async createDeviceSensor(dto: CreateSensorDeviceDto, user: UsersModel) {
+  async createDeviceSensor(
+    dto: CreateSensorDeviceDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const sensorDeviceRepository = this.getSensorDeviceRepository(qr);
+
     const device = await this.deviceService.getDeviceById(dto.device);
 
     const spec = await this.specService.getSensorSpecificationById(dto.spec);
 
-    const sensorDevice = this.deviceSensorRepository.create({
+    const sensorDevice = sensorDeviceRepository.create({
       ...dto,
       device,
       spec,
       createdBy: user.email,
     });
 
-    const newSensorDevice = this.deviceSensorRepository.save(sensorDevice);
+    const newSensorDevice = sensorDeviceRepository.save(sensorDevice);
 
     return newSensorDevice;
   }
@@ -99,7 +122,12 @@ export class SensorDeviceService {
     id: number,
     dto: UpdateSensorDeviceDto,
     user: UsersModel,
+    qr?: QR,
   ) {
+    const sensorDeviceRepository = this.getSensorDeviceRepository(qr);
+
+    const sensorDeviceLogRepository = this.getSensorDeviceLogRepository(qr);
+
     const deviceSensor = await this.getDeviceSensorById(id);
 
     const device = await this.deviceService.getDeviceById(dto.device);
@@ -126,25 +154,33 @@ export class SensorDeviceService {
     const deviceSensorLog = this.createDeviceSensorLogModel(
       deviceSensor,
       user.email,
+      ActionEnum.PATCH,
+      sensorDeviceLogRepository,
     );
 
-    await this.deviceSensorLogRepository.save(deviceSensorLog);
+    await sensorDeviceLogRepository.save(deviceSensorLog);
 
-    return await this.deviceSensorRepository.save(newDeviceSensor);
+    return await sensorDeviceRepository.save(newDeviceSensor);
   }
 
   // 삭제
-  async deleteDeviceSensorById(id: number, user: UsersModel) {
+  async deleteDeviceSensorById(id: number, user: UsersModel, qr?: QR) {
+    const sensorDeviceRepository = this.getSensorDeviceRepository(qr);
+
+    const sensorDeviceLogRepository = this.getSensorDeviceLogRepository(qr);
+
     const deviceSensor = await this.getDeviceSensorById(id);
 
     const deviceSensorLog = this.createDeviceSensorLogModel(
       deviceSensor,
       user.email,
+      ActionEnum.DELETE,
+      sensorDeviceLogRepository,
     );
 
-    await this.deviceSensorLogRepository.save(deviceSensorLog);
+    await sensorDeviceLogRepository.save(deviceSensorLog);
 
-    return await this.deviceSensorRepository.delete(id);
+    return await sensorDeviceRepository.delete(id);
   }
 
   // ------------------------------------------------------------------
@@ -153,8 +189,10 @@ export class SensorDeviceService {
   createDeviceSensorLogModel(
     deviceSensor: SensorDeviceModel,
     userEmail: string,
+    actionType: ActionEnum,
+    deviceSensorLogRepository: Repository<SensorDeviceLogModel>,
   ) {
-    return this.deviceSensorLogRepository.create({
+    return deviceSensorLogRepository.create({
       correctionValue: deviceSensor.correctionValue,
       customStableEnd: deviceSensor.customStableEnd,
       customStableStart: deviceSensor.customStableStart,
@@ -163,6 +201,7 @@ export class SensorDeviceService {
       name: deviceSensor.name,
       recordedBy: userEmail,
       spec: deviceSensor.spec,
+      actionType,
     });
   }
 
@@ -237,14 +276,20 @@ export class SensorDeviceService {
   }
 
   // 받은 센서디바이스 저장 로직
-  async saveSensorDevice(updatedData: SensorDeviceModel): Promise<void> {
-    await this.deviceSensorRepository.save(updatedData);
+  async saveSensorDevice(
+    updatedData: SensorDeviceModel,
+    deviceSensorRepository: Repository<SensorDeviceModel>,
+  ): Promise<void> {
+    await deviceSensorRepository.save(updatedData);
   }
 
   // 받은 센서디바이스 리스트 저장 로직
-  async saveSensorDeviceList(list: SensorDeviceModel[]) {
+  async saveSensorDeviceList(
+    list: SensorDeviceModel[],
+    deviceSensorRepository: Repository<SensorDeviceModel>,
+  ) {
     const sensorReturn = await Promise.all(
-      list.map((device) => this.deviceSensorRepository.save(device)),
+      list.map((device) => deviceSensorRepository.save(device)),
     );
     if (sensorReturn.length === 0) {
       wlogger.error(
@@ -286,6 +331,7 @@ export class SensorDeviceService {
   async updateSensorDeviceRangeAndCorrectValueList(
     list: SensorDeviceModel[],
     user: UsersModel,
+    qr?: QR,
   ) {
     const newList = list.map(async (model) => {
       const sensorDevice = await this.deviceSensorRepository.findOne({
@@ -319,6 +365,7 @@ export class SensorDeviceService {
             model,
             RangeUpdateType.START,
             user.email,
+            qr,
           );
         }
 
@@ -328,6 +375,7 @@ export class SensorDeviceService {
             model,
             RangeUpdateType.END,
             user.email,
+            qr,
           );
         }
       } catch (error) {
@@ -339,6 +387,7 @@ export class SensorDeviceService {
         model.id,
         updateSensorDevice,
         user,
+        qr,
       );
     });
 

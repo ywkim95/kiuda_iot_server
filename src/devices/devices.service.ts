@@ -13,8 +13,7 @@ import { DevicesLogModel } from './entities/device-log.entity';
 import { GatewaysService } from 'src/gateways/gateways.service';
 import { ActionEnum } from 'src/common/const/action-enum.const';
 import wlogger from 'src/log/winston-logger.const';
-import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
-
+import { QueryRunner as QR } from 'typeorm';
 @Injectable()
 export class DevicesService {
   constructor(
@@ -25,6 +24,22 @@ export class DevicesService {
     private readonly commonService: CommonService,
     private readonly gatewaysService: GatewaysService,
   ) {}
+
+  // qr
+
+  // deviceRepository qr
+  getDeviceRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<DevicesModel>(DevicesModel)
+      : this.deviceRepository;
+  }
+
+  // deviceLogRepository qr
+  getDeviceLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<DevicesLogModel>(DevicesLogModel)
+      : this.deviceLogRepository;
+  }
 
   // 기본 CRUD + 페이지네이션
 
@@ -45,16 +60,17 @@ export class DevicesService {
   }
 
   // 등록
-  async createDevice(dto: CreateDeviceDto, user: UsersModel) {
+  async createDevice(dto: CreateDeviceDto, user: UsersModel, qr?: QR) {
+    const deviceRepository = this.getDeviceRepository(qr);
     const gateway = await this.gatewaysService.getGatewayById(dto.gateway);
 
-    const device = this.deviceRepository.create({
+    const device = deviceRepository.create({
       ...dto,
       gateway,
       createdBy: user.email,
     });
 
-    const newDevice = await this.deviceRepository.save(device);
+    const newDevice = await deviceRepository.save(device);
 
     return newDevice;
   }
@@ -81,7 +97,16 @@ export class DevicesService {
   }
 
   // 수정
-  async updateDeviceById(id: number, dto: UpdateDeviceDto, user: UsersModel) {
+  async updateDeviceById(
+    id: number,
+    dto: UpdateDeviceDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    const deviceRepository = this.getDeviceRepository(qr);
+
+    const deviceLogRepository = this.getDeviceLogRepository(qr);
+
     const gateway = await this.gatewaysService.getGatewayById(dto.gateway);
 
     const device = await this.getDeviceById(id);
@@ -102,6 +127,8 @@ export class DevicesService {
       updatedAt: new Date(),
     };
 
+    console.log(dto.gateway);
+
     if (dto.gateway) {
       newDevice.pkUpdateDate = new Date();
       /**
@@ -113,34 +140,41 @@ export class DevicesService {
       device,
       user.email,
       ActionEnum.PATCH,
+      deviceLogRepository,
     );
 
-    await this.deviceLogRepository.save(deviceLog);
+    await deviceLogRepository.save(deviceLog);
 
-    return await this.deviceRepository.save(newDevice);
+    return await deviceRepository.save(newDevice);
   }
 
   // 삭제
-  async deleteDeviceById(id: number, user: UsersModel) {
+  async deleteDeviceById(id: number, user: UsersModel, qr?: QR) {
+    const deviceRepository = this.getDeviceRepository(qr);
+
+    const deviceLogRepository = this.getDeviceLogRepository(qr);
+
     const device = await this.getDeviceById(id);
 
     const deviceLog = this.createDeviceLogModel(
       device,
       user.email,
       ActionEnum.DELETE,
+      deviceLogRepository,
     );
 
-    await this.deviceLogRepository.save(deviceLog);
+    await deviceLogRepository.save(deviceLog);
 
-    return await this.deviceRepository.delete(id);
+    return await deviceRepository.delete(id);
   }
 
   createDeviceLogModel(
     device: DevicesModel,
     userEmail: string,
     actionType: ActionEnum,
+    deviceLogRepository: Repository<DevicesLogModel>,
   ) {
-    return this.deviceLogRepository.create({
+    return deviceLogRepository.create({
       classify: device.classify,
       clientId: device.clientId,
       description: device.description,
@@ -192,6 +226,7 @@ export class DevicesService {
       relations: {
         sensors: true,
         controllers: true,
+        gateway: true,
       },
     });
 
@@ -271,6 +306,7 @@ export class DevicesService {
   async updateSensorAndControllerDeviceUseYnList(
     list: DevicesModel[],
     user: UsersModel,
+    qr?: QR,
   ) {
     const newList = list.map(async (model) => {
       const device = await this.deviceRepository.findOne({
@@ -292,7 +328,7 @@ export class DevicesService {
         gateway: device.gateway.id,
       };
 
-      return await this.updateDeviceById(model.id, updateDevice, user);
+      return await this.updateDeviceById(model.id, updateDevice, user, qr);
     });
 
     return await Promise.all(newList);

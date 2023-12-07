@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RolesEnum } from 'src/users/const/roles.const';
 import { Roles } from 'src/users/decorator/roles.decorator';
@@ -17,7 +18,9 @@ import { SensorSpecPaginateDto } from './dto/paginate-specifications-sensor.dto'
 import { CreateSensorSpecDto } from './dto/create-specifications-sensor.dto';
 import { UpdateSensorSpecDto } from './dto/update-specifications-sensor.dto';
 import { SensorSpecService } from './specifications-sensor.service';
-
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
+import { QueryRunner as QR } from 'typeorm';
 @Controller('sensors/specifications')
 @Roles(RolesEnum.ADMIN)
 export class SensorSpecController {
@@ -50,36 +53,44 @@ export class SensorSpecController {
 
   // 등록
   @Post()
+  @UseInterceptors(TransactionInterceptor)
   async postSensorSpecification(
     @Body() body: CreateSensorSpecDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.specService.createSpecification(body, user);
+    return await this.specService.createSpecification(body, user, qr);
   }
 
   // 수정
   @Patch(':specificationsId')
+  @UseInterceptors(TransactionInterceptor)
   async patchSensorSpecification(
     @Param('specificationsId', ParseIntPipe) specificationsId: number,
     @Body() body: UpdateSensorSpecDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.specService.updateSpecificationById(
       specificationsId,
       body,
       user,
+      qr,
     );
   }
 
   // 삭제
   @Delete(':specificationsId')
+  @UseInterceptors(TransactionInterceptor)
   async deleteSensorSpecification(
     @Param('specificationsId', ParseIntPipe) specificationsId: number,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.specService.deleteSpecificationById(
       specificationsId,
       user,
+      qr,
     );
   }
 }

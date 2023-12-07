@@ -61,6 +61,7 @@ import { DevicesLogModel } from './devices/entities/device-log.entity';
 import { GatewaysLogModel } from './gateways/entities/gateway-log.entity';
 import { SensorDeviceLogModel } from './sensors/device/entities/device-sensor-log.entity';
 import { SensorSpecLogModel } from './sensors/specifications/entities/specifications-sensor-log.entity';
+import { NotificationModel } from './notifications/entities/notification.entity';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { SensorSpecLogModel } from './sensors/specifications/entities/specificat
         UserCustomValueModel,
         UserCustomValueLogModel,
         FirebaseModel,
+        NotificationModel,
       ],
       synchronize: true,
     }),

@@ -7,7 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ContDevicePaginateDto } from './dto/paginate-devices-controller.dto';
 import { CreateContDeviceDto } from './dto/create-devices-controller.dto';
@@ -17,7 +17,9 @@ import { UpdateContDeviceDto } from './dto/update-devices-controller.dto';
 import { ContDeviceService } from './device-controller.service';
 import { Roles } from 'src/users/decorator/roles.decorator';
 import { RolesEnum } from 'src/users/const/roles.const';
-
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
+import { QueryRunner as QR } from 'typeorm';
 @Controller('controllers/deviceControllers')
 export class ContDeviceController {
   constructor(private readonly contDeviceService: ContDeviceService) {}
@@ -34,11 +36,13 @@ export class ContDeviceController {
   // 등록
   @Post()
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async postDeviceController(
     @Body() body: CreateContDeviceDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.contDeviceService.createDeviceController(body, user);
+    return await this.contDeviceService.createDeviceController(body, user, qr);
   }
 
   // 상세
@@ -55,28 +59,34 @@ export class ContDeviceController {
   // 수정
   // adminOrMe
   @Patch(':deviceControllerId')
+  @UseInterceptors(TransactionInterceptor)
   async patchDeviceController(
     @Param('deviceControllerId', ParseIntPipe) deviceControllerId: number,
     @Body() body: UpdateContDeviceDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.contDeviceService.updateDeviceControllerById(
       deviceControllerId,
       body,
       user,
+      qr,
     );
   }
 
   // 삭제
-  @Roles(RolesEnum.ADMIN)
   @Delete(':deviceControllerId')
+  @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async deleteDeviceController(
     @Param('deviceControllerId', ParseIntPipe) deviceControllerId: number,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.contDeviceService.deleteDeviceControllerById(
       deviceControllerId,
       user,
+      qr,
     );
   }
 }

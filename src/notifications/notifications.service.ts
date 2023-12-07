@@ -51,11 +51,22 @@ export class NotificationsService {
     const noti = new NotificationModel();
     noti.device = device;
     noti.user = user;
-    noti.title = ``;
-    noti.message = ``; // 여기에 내용을 채워야한다.
+    noti.title = title ?? '';
+    noti.message = message ?? ''; // 여기에 내용을 채워야한다.
 
-    await this.saveNoti(noti);
-    await this.sendNotification(noti);
+    const save = await this.saveNoti(noti);
+    console.log(save);
+
+    const notify = await this.notiRepository.findOne({
+      where: {
+        user: { id: user.id },
+      },
+      relations: {
+        user: true,
+      },
+    });
+    console.log(notify);
+    await this.sendNotification(notify);
   }
 
   // title은 어떤 범위인지 low, high, warning 정도로 나뉘겠지

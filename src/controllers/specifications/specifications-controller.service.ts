@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommonService } from 'src/common/common.service';
-import { FindManyOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { PaginateContSpecDto } from './dto/paginate-specifications-controller.dto';
 import { ContSpecModel } from './entities/specifications-controller.entity';
 import { CreateContSpecDto } from './dto/create-specifications-controller.dto';
@@ -18,7 +18,7 @@ import { ContSpecStepLogModel } from './entities/specifications-step-log.entity'
 import { contSpecOptions } from './const/specifications-controller-options.const';
 import wlogger from 'src/log/winston-logger.const';
 import { ActionEnum } from 'src/common/const/action-enum.const';
-
+import { QueryRunner as QR } from 'typeorm';
 @Injectable()
 export class ContSpecService {
   constructor(
@@ -32,6 +32,36 @@ export class ContSpecService {
     private readonly controllerSpecificationsStepLogRepository: Repository<ContSpecStepLogModel>,
     private readonly commonService: CommonService,
   ) {}
+
+  // qr
+
+  // contSpec qr
+  getContSpecRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContSpecModel>(ContSpecModel)
+      : this.controllerSpecificationsRepository;
+  }
+
+  // contSpecLog qr
+  getContSpecLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContSpecLogModel>(ContSpecLogModel)
+      : this.controllerSpecificationsLogRepository;
+  }
+
+  // contSpecStep qr
+  getContSpecStepRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContSpecStepModel>(ContSpecStepModel)
+      : this.controllerSpecificationsStepRepository;
+  }
+
+  // contSpecStepLog qr
+  getContSpecStepLogRepository(qr?: QR) {
+    return qr
+      ? qr.manager.getRepository<ContSpecStepLogModel>(ContSpecStepLogModel)
+      : this.controllerSpecificationsStepLogRepository;
+  }
 
   // 페이지네이션
   async paginateControllerSpecifications(dto: PaginateContSpecDto) {
@@ -64,25 +94,28 @@ export class ContSpecService {
 
   // 등록
   // 나중에 프론트에서 digital만들때 그냥 0값과 1값 알아서 만들어서 보내기
-  async createSpecification(dto: CreateContSpecDto, user: UsersModel) {
+  async createSpecification(dto: CreateContSpecDto, user: UsersModel, qr?: QR) {
+    const contSpecRepository = this.getContSpecRepository(qr);
+    const contSpecStepRepository = this.getContSpecStepRepository(qr);
+
     try {
-      const spec = this.controllerSpecificationsRepository.create({
+      const spec = contSpecRepository.create({
         ...dto,
         specificationSteps: [],
         createdBy: user.email,
       });
 
-      const newSpec = await this.controllerSpecificationsRepository.save(spec);
+      const newSpec = await contSpecRepository.save(spec);
 
       if (dto.specificationSteps && dto.specificationSteps.length > 0) {
         const specSteps = dto.specificationSteps.map((stepDto) => {
-          return this.controllerSpecificationsStepRepository.create({
+          return contSpecStepRepository.create({
             ...stepDto,
             specification: newSpec,
             createdBy: user.email,
           });
         });
-        await this.controllerSpecificationsStepRepository.save(specSteps);
+        await contSpecStepRepository.save(specSteps);
       }
 
       return newSpec;
@@ -96,7 +129,16 @@ export class ContSpecService {
     id: number,
     dto: UpdateContSpecDto,
     user: UsersModel,
+    qr?: QR,
   ) {
+    const contSpecRepository = this.getContSpecRepository(qr);
+
+    const contSpecLogRepository = this.getContSpecLogRepository(qr);
+
+    const contSpecStepRepository = this.getContSpecStepRepository(qr);
+
+    const contSpecStepLogRepository = this.getContSpecStepLogRepository(qr);
+
     const spec = await this.getControllerSpecificationById(id);
 
     const comparisonData: ContSpecModel = {
@@ -114,15 +156,15 @@ export class ContSpecService {
       updatedBy: user.email,
       updatedAt: new Date(),
     };
-    await this.controllerSpecificationsRepository.save(newSpec);
+
+    await contSpecRepository.save(newSpec);
 
     if (dto.specificationSteps) {
-      const existingSteps =
-        await this.controllerSpecificationsStepRepository.find({
-          where: {
-            specification: spec,
-          },
-        });
+      const existingSteps = await contSpecStepRepository.find({
+        where: {
+          specification: spec,
+        },
+      });
 
       for (const stepDto of dto.specificationSteps) {
         let step = existingSteps.find((step) => step.id === stepDto.id);
@@ -135,24 +177,25 @@ export class ContSpecService {
             updatedAt: new Date(),
           };
 
-          await this.controllerSpecificationsStepRepository.save(step);
+          await contSpecStepRepository.save(step);
 
           // log
           const stepLog = this.createContSpecStepLogModel(
             step,
             user.email,
             ActionEnum.PATCH,
+            contSpecStepLogRepository,
           );
 
           await this.controllerSpecificationsStepLogRepository.save(stepLog);
         } else {
-          const newStep = this.controllerSpecificationsStepRepository.create({
+          const newStep = contSpecStepRepository.create({
             ...stepDto,
             specification: newSpec,
             createdBy: user.email,
           });
 
-          await this.controllerSpecificationsStepRepository.save(newStep);
+          await contSpecStepRepository.save(newStep);
         }
       }
     }
@@ -162,44 +205,64 @@ export class ContSpecService {
       spec,
       user.email,
       ActionEnum.PATCH,
+      contSpecLogRepository,
     );
 
-    await this.controllerSpecificationsLogRepository.save(specLog);
+    await contSpecLogRepository.save(specLog);
 
     return newSpec;
   }
 
   // 삭제
-  async deleteSpecificationById(id: number, user: UsersModel) {
+  async deleteSpecificationById(id: number, user: UsersModel, qr?: QR) {
+    const contSpecRepository = this.getContSpecRepository(qr);
+
+    const contSpecLogRepository = this.getContSpecLogRepository(qr);
+
+    const contSpecStepRepository = this.getContSpecStepRepository(qr);
+
+    const contSpecStepLogRepository = this.getContSpecStepLogRepository(qr);
+
     const spec = await this.getControllerSpecificationById(id);
 
     const specLog = this.createContSpecLogModel(
       spec,
       user.email,
       ActionEnum.DELETE,
+      contSpecLogRepository,
     );
 
     const stepsLog = spec.specificationSteps.map((step) =>
-      this.createContSpecStepLogModel(step, user.email, ActionEnum.DELETE),
+      this.createContSpecStepLogModel(
+        step,
+        user.email,
+        ActionEnum.DELETE,
+        contSpecStepLogRepository,
+      ),
     );
 
     await Promise.all([
-      await this.controllerSpecificationsLogRepository.save(specLog),
-      await this.controllerSpecificationsStepLogRepository.save(stepsLog),
+      await contSpecLogRepository.save(specLog),
+      await contSpecStepLogRepository.save(stepsLog),
     ]);
 
-    await this.controllerSpecificationsStepRepository.delete({
+    await contSpecStepRepository.delete({
       specification: { id: spec.id },
     });
 
-    return await this.controllerSpecificationsRepository.delete(id);
+    return await contSpecRepository.delete(id);
   }
 
   async deleteStepsBySpecId(
     id: number,
     body: ContSpecStepModel[],
     user: UsersModel,
+    qr?: QR,
   ) {
+    const contSpecStepRepository = this.getContSpecStepRepository(qr);
+
+    const contSpecStepLogRepository = this.getContSpecStepLogRepository(qr);
+
     const spec = await this.getControllerSpecificationById(id);
 
     try {
@@ -212,11 +275,12 @@ export class ContSpecService {
             step,
             user.email,
             ActionEnum.DELETE,
+            contSpecStepLogRepository,
           );
 
-          await this.controllerSpecificationsStepLogRepository.save(stepLog);
+          await contSpecStepLogRepository.save(stepLog);
 
-          await this.controllerSpecificationsStepRepository.delete(step.id);
+          await contSpecStepRepository.delete(step.id);
         }
       }
     } catch (error) {
@@ -237,8 +301,9 @@ export class ContSpecService {
     spec: ContSpecModel,
     userEmail: string,
     actionType: ActionEnum,
+    controllerSpecificationsLogRepository: Repository<ContSpecLogModel>,
   ) {
-    return this.controllerSpecificationsLogRepository.create({
+    return controllerSpecificationsLogRepository.create({
       name: spec.name,
       varName: spec.varName,
       controllerType: spec.controllerType,
@@ -259,8 +324,9 @@ export class ContSpecService {
     step: ContSpecStepModel,
     userEmail: string,
     actionType: ActionEnum,
+    controllerSpecificationsStepLogRepository: Repository<ContSpecStepLogModel>,
   ) {
-    return this.controllerSpecificationsStepLogRepository.create({
+    return controllerSpecificationsStepLogRepository.create({
       label: step.label,
       modelId: step.id,
       specification: step.specification,

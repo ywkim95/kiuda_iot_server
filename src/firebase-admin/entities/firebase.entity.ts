@@ -1,8 +1,9 @@
 import { UsersModel } from '../../users/entity/users.entity';
 import { BaseWithUpdateModel } from '../../common/entity/base-with-update.entity';
-import { Column, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IsString } from 'class-validator';
 
+@Entity()
 export class FirebaseModel extends BaseWithUpdateModel {
   @ManyToOne(() => UsersModel)
   @JoinColumn()

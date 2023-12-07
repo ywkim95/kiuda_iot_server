@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { GatewaysService } from './gateways.service';
 import { Roles } from 'src/users/decorator/roles.decorator';
@@ -22,6 +23,9 @@ import { UpdateSsidGatewayDto } from './dto/update-ssid-gateway.dto';
 import { UpdateFrequencyGatewayDto } from './dto/update-frequency-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
 import wlogger from 'src/log/winston-logger.const';
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
+import { QueryRunner as QR } from 'typeorm';
 
 @Controller('gateways')
 export class GatewaysController {
@@ -54,8 +58,13 @@ export class GatewaysController {
   // 게이트웨이 등록
   @Post()
   @Roles(RolesEnum.ADMIN)
-  async postGateway(@Body() body: CreateGatewayDto, @User() user: UsersModel) {
-    const result = await this.gatewaysService.createGateway(body, user);
+  @UseInterceptors(TransactionInterceptor)
+  async postGateway(
+    @Body() body: CreateGatewayDto,
+    @User() user: UsersModel,
+    @QueryRunner() qr: QR,
+  ) {
+    const result = await this.gatewaysService.createGateway(body, user, qr);
 
     if (result.success) {
       return await this.gatewaysService.getGatewayById(result.gateway.id);
@@ -68,23 +77,31 @@ export class GatewaysController {
   // 게이트웨이 수정
   @Patch(':gatewayId')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async patchGateway(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: UpdateGatewayDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.gatewaysService.updateGatewayById(gatewayId, body, user);
+    return await this.gatewaysService.updateGatewayById(
+      gatewayId,
+      body,
+      user,
+      qr,
+    );
   }
 
   // 게이트웨이 삭제
   @Delete(':gatewayId')
   @Roles(RolesEnum.ADMIN)
-  @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async deleteGateway(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.gatewaysService.deleteGatewayById(gatewayId, user);
+    return await this.gatewaysService.deleteGatewayById(gatewayId, user, qr);
   }
 
   // -----------------------------------------------------------
@@ -98,33 +115,49 @@ export class GatewaysController {
   // 게이트웨이 변경
   @Patch(':gatewayId/id')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async postGatewayId(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: UpdateIdGatewayDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.gatewaysService.updateGatewayId(gatewayId, body, user);
+    return await this.gatewaysService.updateGatewayId(
+      gatewayId,
+      body,
+      user,
+      qr,
+    );
   }
 
   // SSID 변경
   @Patch(':gatewayId/ssid')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async postSsid(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: UpdateSsidGatewayDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.gatewaysService.updateSsid(gatewayId, body, user);
+    return await this.gatewaysService.updateSsid(gatewayId, body, user, qr);
   }
 
   // 주파수변경
   @Patch(':gatewayId/frequency')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async postFrequency(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: UpdateFrequencyGatewayDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.gatewaysService.updateFrequency(gatewayId, body, user);
+    return await this.gatewaysService.updateFrequency(
+      gatewayId,
+      body,
+      user,
+      qr,
+    );
   }
 }

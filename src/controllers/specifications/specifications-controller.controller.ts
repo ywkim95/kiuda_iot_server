@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { User } from 'src/users/decorator/user.decorator';
 import { UsersModel } from 'src/users/entity/users.entity';
@@ -18,7 +19,9 @@ import { ContSpecService } from './specifications-controller.service';
 import { Roles } from 'src/users/decorator/roles.decorator';
 import { RolesEnum } from 'src/users/const/roles.const';
 import { ContSpecStepModel } from './entities/specifications-step.entity';
-
+import { QueryRunner as QR } from 'typeorm';
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
 @Controller('controllers/specifications')
 export class ContSpecController {
   constructor(private readonly contSpecService: ContSpecService) {}
@@ -47,13 +50,16 @@ export class ContSpecController {
   // 등록
   @Post()
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async postDeivceController(
     @Body() body: CreateContSpecDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     const contDevice = await this.contSpecService.createSpecification(
       body,
       user,
+      qr,
     );
     return await this.contSpecService.getControllerSpecificationById(
       contDevice.id,
@@ -63,46 +69,55 @@ export class ContSpecController {
   // 수정
   @Patch(':specificationsControllerId')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async patchDeivceControllers(
     @Param('specificationsControllerId', ParseIntPipe)
     specificationsControllerId: number,
     @Body() body: UpdateContSpecDto,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.contSpecService.updateSpecificationById(
       specificationsControllerId,
       body,
       user,
+      qr,
     );
   }
 
   // 삭제
   @Delete(':specificationsControllerId')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async deleteDeivceControllers(
     @Param('specificationsControllerId', ParseIntPipe)
     specificationsControllerId: number,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.contSpecService.deleteSpecificationById(
       specificationsControllerId,
       user,
+      qr,
     );
   }
 
   // step리스트를 받아서 안에있는 리스트의 정보를 삭제
   @Delete(':specificationsControllerId/steps')
   @Roles(RolesEnum.ADMIN)
+  @UseInterceptors(TransactionInterceptor)
   async deleteDeviceControllersSteps(
     @Param('specificationsControllerId', ParseIntPipe)
     specificationsControllerId: number,
     @Body() body: ContSpecStepModel[],
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
     return await this.contSpecService.deleteStepsBySpecId(
       specificationsControllerId,
       body,
       user,
+      qr,
     );
   }
 }

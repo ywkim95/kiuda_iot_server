@@ -9,7 +9,7 @@ export class FirebaseAdminController {
   constructor(private readonly firebaseAdminService: FirebaseAdminService) {}
 
   @Post()
-  async saveToken(
+  async postToken(
     @Body() body: saveFirebaseTokenDto,
     @User() user: UsersModel,
   ) {

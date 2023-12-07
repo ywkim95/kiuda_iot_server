@@ -5,12 +5,15 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { UsersModel } from 'src/users/entity/users.entity';
 import { User } from 'src/users/decorator/user.decorator';
 import { Setting } from './type/setting.type';
-
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
+import { QueryRunner as QR } from 'typeorm';
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -34,11 +37,13 @@ export class SettingsController {
   // 세팅값 저장하기
   // adminOrMe
   @Patch(':gatewayId')
+  @UseInterceptors(TransactionInterceptor)
   async patchSetting(
     @Param('gatewayId', ParseIntPipe) gatewayId: number,
     @Body() body: Setting,
     @User() user: UsersModel,
+    @QueryRunner() qr: QR,
   ) {
-    return await this.settingsService.updateSetting(gatewayId, body, user);
+    return await this.settingsService.updateSetting(gatewayId, body, user, qr);
   }
 }
