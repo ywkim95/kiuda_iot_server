@@ -184,11 +184,16 @@ export class AuthService {
     user: Pick<UsersModel, 'email' | 'password'>,
     request: Request,
   ) {
-    const ip = this.usersService.findIp(request);
+    try {
+      const ip = this.usersService.findIp(request);
 
-    const existingUser = await this.authenticateUser(user, ip);
+      const existingUser = await this.authenticateUser(user, ip);
 
-    return this.loginUser(existingUser);
+      return this.loginUser(existingUser);
+    } catch (error) {
+      console.log(error);
+      wlogger.error(error);
+    }
   }
 
   async registerWithEmail(user: RegisterUserDto, request: Request) {

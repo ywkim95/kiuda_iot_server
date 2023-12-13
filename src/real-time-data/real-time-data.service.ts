@@ -273,24 +273,31 @@ export class RealTimeDataService {
   // 실시간 데이터를 가져와 유저에게 전달하는 로직인데 이름을 뭘로하지
 
   async fetchRealTimedata(roomId: string) {
-    const [countryId, areaId, gatewayId] = splitString(roomId, 3);
-    const deviceList = await this.devicesService.findDeviceList(
-      countryId,
-      areaId,
-      gatewayId,
-    );
+    try {
+      const [countryId, areaId, gatewayId] = splitString(roomId, 3);
+      console.log(countryId, areaId, gatewayId);
+      const deviceList = await this.devicesService.findDeviceList(
+        countryId,
+        areaId,
+        gatewayId,
+      );
 
-    const fetchDataPromises = deviceList.map((device) => {
-      if (device.classify === DeviceEnum.SENSOR) {
-        return this.findOneSensorData(device.id);
-      } else {
-        return this.findOneControllerData(device.id);
-      }
-    });
+      const fetchDataPromises = deviceList.map((device) => {
+        if (device.classify === DeviceEnum.SENSOR) {
+          return this.findOneSensorData(device.id);
+        } else {
+          return this.findOneControllerData(device.id);
+        }
+      });
 
-    const dataList = await Promise.all(fetchDataPromises);
+      const dataList = await Promise.all(fetchDataPromises);
+      console.log(dataList);
 
-    return dataList;
+      return dataList;
+    } catch (error) {
+      wlogger.error(error);
+      throw new BadRequestException(error);
+    }
   }
 
   private async findOneSensorData(deviceId: number) {

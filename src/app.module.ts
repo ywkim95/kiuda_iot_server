@@ -62,6 +62,7 @@ import { GatewaysLogModel } from './gateways/entities/gateway-log.entity';
 import { SensorDeviceLogModel } from './sensors/device/entities/device-sensor-log.entity';
 import { SensorSpecLogModel } from './sensors/specifications/entities/specifications-sensor-log.entity';
 import { NotificationModel } from './notifications/entities/notification.entity';
+import { ApiController } from './api.controller';
 
 @Module({
   imports: [
@@ -79,7 +80,7 @@ import { NotificationModel } from './notifications/entities/notification.entity'
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
-      useUTC: true,
+      useUTC: false,
       type: 'postgres',
       host: process.env[ENV_DB_HOST_KEY],
       port: parseInt(process.env[ENV_DB_PORT_KEY]),
@@ -124,7 +125,7 @@ import { NotificationModel } from './notifications/entities/notification.entity'
     FirebaseAdminModule,
     SettingsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ApiController],
   providers: [
     AppService,
     {

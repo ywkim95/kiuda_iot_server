@@ -69,6 +69,9 @@ export class UsersService {
       where: {
         email,
       },
+      relations: {
+        gateways: true,
+      },
     });
 
     if (!user) {
