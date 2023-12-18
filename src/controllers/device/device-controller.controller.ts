@@ -89,4 +89,22 @@ export class ContDeviceController {
       qr,
     );
   }
+
+  @Get('device/:deviceId')
+  @UseInterceptors(TransactionInterceptor)
+  async getContDeviceByDeviceId(
+    @Param('deviceId', ParseIntPipe) deviceId: number,
+  ) {
+    const list = await this.contDeviceService.getContDeviceByDeviceId(deviceId);
+    console.log(list);
+    return list;
+  }
+
+  @Get('sensorList/:deviceId')
+  @UseInterceptors(TransactionInterceptor)
+  async getSensorDevicesByMappingId(
+    @Param('deviceId', ParseIntPipe) deviceId: number,
+  ) {
+    return await this.contDeviceService.getSensorDeviceByMappingId(deviceId);
+  }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ContRealTimeDataModel } from './entities/real-time/real-time-controller.entity';
 import { SensorRealTimeDataModel } from './entities/real-time/real-time-sensor.entity';
@@ -13,7 +13,6 @@ import { DevicesModule } from 'src/devices/devices.module';
 import { CommonModule } from 'src/common/common.module';
 import { SensorDeviceModule } from '../sensors/device/device-sensor.module';
 import { SensorSpecModule } from '../sensors/specifications/specifications-sensor.module';
-import { ContDeviceModule } from 'src/controllers/device/device-controller.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 import { GatewaysModule } from 'src/gateways/gateways.module';
@@ -30,15 +29,14 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
       FiveMinutesAverageModel,
       AccumulatedIrradianceModel,
     ]),
-    DevicesModule,
     CommonModule,
-    ContDeviceModule,
     AuthModule,
     UsersModule,
     GatewaysModule,
     NotificationsModule,
     SensorDeviceModule,
     SensorSpecModule,
+    forwardRef(() => DevicesModule),
   ],
   exports: [RealTimeDataService, RealTimeDataSaveService, RealTimeDataGateway],
   controllers: [RealTimeDataController],

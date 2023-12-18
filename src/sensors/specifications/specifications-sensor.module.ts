@@ -10,7 +10,6 @@ import { SensorSpecLogModel } from './entities/specifications-sensor-log.entity'
 @Module({
   imports: [
     TypeOrmModule.forFeature([SensorSpecModel, SensorSpecLogModel]),
-    DevicesModule,
     CommonModule,
   ],
   exports: [SensorSpecService],

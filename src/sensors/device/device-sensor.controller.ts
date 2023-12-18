@@ -98,4 +98,15 @@ export class SensorDeviceController {
       qr,
     );
   }
+
+  @Get('device/:deviceId')
+  @UseInterceptors(TransactionInterceptor)
+  async getSensorDeviceByDeviceId(
+    @Param('deviceId', ParseIntPipe) deviceId: number,
+  ) {
+    const list =
+      await this.deviceSensorsService.getSensorDeviceByDeviceId(deviceId);
+    console.log(list);
+    return list;
+  }
 }

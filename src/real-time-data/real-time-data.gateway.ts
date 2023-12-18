@@ -35,8 +35,8 @@ export class RealTimeDataGateway
 
   private intervalMap = new Map<string, NodeJS.Timeout>();
 
-  afterInit(server: any) {
-    console.log('after gateway init');
+  afterInit(server: Server) {
+    server.disconnectSockets();
   }
 
   private leaveAllRoomsExceptCurrent(socket: Socket) {
@@ -50,7 +50,7 @@ export class RealTimeDataGateway
   handleDisconnect(socket: Socket) {
     console.log(`on disconnnect called: ${socket.id}`);
     this.stopSendingData(socket);
-    this.leaveAllRoomsExceptCurrent(socket);
+    socket.rooms.clear();
   }
 
   async handleConnection(socket: Socket & { user: UsersModel }) {
@@ -119,6 +119,7 @@ export class RealTimeDataGateway
   ) {
     // 로직 흐름 룸 아이디를 받아서 현재 기기에서
     const { roomId } = data;
+    console.log(roomId);
 
     this.leaveAllRoomsExceptCurrent(socket);
     socket.join(roomId);
@@ -133,9 +134,11 @@ export class RealTimeDataGateway
     @ConnectedSocket() socket: Socket & { user: UsersModel },
   ) {
     const { roomId } = data;
+    this.leaveAllRoomsExceptCurrent(socket);
     socket.leave(roomId);
     this.stopSendingData(socket);
-  }
+    this.handleDisconnect(socket);
+  } //
 
   // 데이터 전송 일시중지
   @UsePipes(CustomValidationPipe)

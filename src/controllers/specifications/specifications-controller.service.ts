@@ -336,4 +336,25 @@ export class ContSpecService {
       actionType,
     });
   }
+
+  async getContSpecById(id: number) {
+    const spec = await this.controllerSpecificationsRepository.findOne({
+      where: {
+        id,
+      },
+      relations: {
+        specificationSteps: true,
+      },
+    });
+    if (!spec) {
+      wlogger.error(
+        `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
+      );
+      throw new NotFoundException(
+        `해당 장비를 찾을 수 없습니다. 요청한 id가 ${id}가 맞는지 확인 바랍니다.`,
+      );
+    }
+
+    return spec;
+  }
 }

@@ -12,10 +12,10 @@ import { ContDeviceModule } from 'src/controllers/device/device-controller.modul
 @Module({
   imports: [
     TypeOrmModule.forFeature([SensorDeviceModel, SensorDeviceLogModel]),
-    DevicesModule,
+    forwardRef(() => DevicesModule),
+    forwardRef(() => ContDeviceModule),
     CommonModule,
     SensorSpecModule,
-    forwardRef(() => ContDeviceModule),
   ],
   exports: [SensorDeviceService],
   controllers: [SensorDeviceController],

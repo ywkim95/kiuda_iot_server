@@ -18,7 +18,6 @@ import { ContSpecStepLogModel } from './entities/specifications-step-log.entity'
       ContSpecStepLogModel,
     ]),
     CommonModule,
-    DevicesModule,
   ],
   exports: [ContSpecService],
   controllers: [ContSpecController],

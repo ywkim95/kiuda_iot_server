@@ -37,6 +37,17 @@ export class DevicesController {
     return await this.devicesService.createDevice(body, user);
   }
 
+  // ---
+  @Get('roomId/:roomId')
+  @UseInterceptors(TransactionInterceptor)
+  async getDeviceByRoomId(
+    @Param('roomId') roomId: string,
+    @User() user: UsersModel,
+    @QueryRunner() qr: QR,
+  ) {
+    return await this.devicesService.getDevicesByRoomId(roomId, user, qr);
+  }
+
   // 리스트 조회
   @Get()
   @Roles(RolesEnum.ADMIN)

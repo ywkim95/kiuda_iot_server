@@ -29,9 +29,10 @@ export class SensorDeviceService {
     private readonly deviceSensorRepository: Repository<SensorDeviceModel>,
     @InjectRepository(SensorDeviceLogModel)
     private readonly deviceSensorLogRepository: Repository<SensorDeviceLogModel>,
-    private readonly deviceService: DevicesService,
     private readonly specService: SensorSpecService,
     private readonly commonService: CommonService,
+    @Inject(forwardRef(() => DevicesService))
+    private readonly deviceService: DevicesService,
     @Inject(forwardRef(() => ContDeviceService))
     private readonly contDeviceService: ContDeviceService,
   ) {}
@@ -181,6 +182,24 @@ export class SensorDeviceService {
     await sensorDeviceLogRepository.save(deviceSensorLog);
 
     return await sensorDeviceRepository.delete(id);
+  }
+
+  async getSensorDeviceByDeviceId(deviceId: number) {
+    const sensorDeviceList = await this.deviceSensorRepository.find({
+      where: {
+        device: {
+          id: deviceId,
+        },
+      },
+      relations: {
+        spec: true,
+      },
+    });
+    if (!sensorDeviceList || sensorDeviceList.length === 0) {
+      wlogger.error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
+      throw new Error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
+    }
+    return sensorDeviceList;
   }
 
   // ------------------------------------------------------------------

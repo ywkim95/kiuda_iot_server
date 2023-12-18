@@ -4,7 +4,7 @@ import { IsString } from 'class-validator';
 
 export class CreateRealTimeControllersDto extends PickType(
   ContRealTimeDataModel,
-  ['gpio1', 'gpio2', 'rssi', 'sqn'],
+  ['rssi', 'sqn'],
 ) {
   @IsString()
   ghid: string;
@@ -17,4 +17,7 @@ export class CreateRealTimeControllersDto extends PickType(
 
   @IsString()
   cid: string;
+
+  @IsString()
+  gpio: string;
 }

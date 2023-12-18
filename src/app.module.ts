@@ -66,19 +66,25 @@ import { ApiController } from './api.controller';
 
 @Module({
   imports: [
+    AuthModule,
     UsersModule,
     CommonModule,
-    RealTimeDataModule,
+    GatewaysModule,
+    DevicesModule,
     SensorSpecModule,
     SensorDeviceModule,
     ContDeviceModule,
     ContSpecModule,
+    RealTimeDataModule,
     NotificationsModule,
-    AuthModule,
+    FirebaseAdminModule,
+    SettingsModule,
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
     }),
+    //
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       useUTC: false,
       type: 'postgres',
@@ -119,11 +125,6 @@ import { ApiController } from './api.controller';
       ],
       synchronize: true,
     }),
-    GatewaysModule,
-    DevicesModule,
-    ScheduleModule.forRoot(),
-    FirebaseAdminModule,
-    SettingsModule,
   ],
   controllers: [AppController, ApiController],
   providers: [

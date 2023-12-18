@@ -43,8 +43,9 @@ export class ContDeviceService {
     @InjectRepository(CustomSettingRangeLogModel)
     private readonly customSettingRangeLogRepository: Repository<CustomSettingRangeLogModel>,
     private readonly commonService: CommonService,
-    private readonly devicesService: DevicesService,
     private readonly contSpecService: ContSpecService,
+    @Inject(forwardRef(() => DevicesService))
+    private readonly devicesService: DevicesService,
     @Inject(forwardRef(() => SensorDeviceService))
     private readonly sensorDeviceService: SensorDeviceService,
   ) {}
@@ -731,5 +732,33 @@ export class ContDeviceService {
         }
       }
     }
+  }
+
+  async getContDeviceByDeviceId(deviceId: number) {
+    const contDeviceList = await this.deviceControllersRepository.find({
+      where: {
+        device: {
+          id: deviceId,
+        },
+      },
+      relations: {
+        customSettingRanges: true,
+        userCustomValues: true,
+        specification: true,
+      },
+    });
+    if (!contDeviceList || contDeviceList.length === 0) {
+      wlogger.error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
+      throw new Error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
+    }
+    return contDeviceList;
+  }
+
+  async getSensorDeviceByMappingId(deviceId: number) {
+    const sensorList = (
+      await this.devicesService.getDeviceById(deviceId, false)
+    ).sensors;
+    console.log(sensorList);
+    return sensorList;
   }
 }

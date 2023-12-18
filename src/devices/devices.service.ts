@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +19,10 @@ import { GatewaysService } from 'src/gateways/gateways.service';
 import { ActionEnum } from 'src/common/const/action-enum.const';
 import wlogger from 'src/log/winston-logger.const';
 import { QueryRunner as QR } from 'typeorm';
+import { splitString } from 'src/real-time-data/const/splitString.const';
+import { ContDeviceService } from 'src/controllers/device/device-controller.service';
+import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
+import { ContSpecService } from 'src/controllers/specifications/specifications-controller.service';
 @Injectable()
 export class DevicesService {
   constructor(
@@ -23,6 +32,11 @@ export class DevicesService {
     private readonly deviceLogRepository: Repository<DevicesLogModel>,
     private readonly commonService: CommonService,
     private readonly gatewaysService: GatewaysService,
+    @Inject(forwardRef(() => ContDeviceService))
+    private readonly contDeviceService: ContDeviceService,
+    @Inject(forwardRef(() => SensorDeviceService))
+    private readonly sensorDeviceService: SensorDeviceService,
+    private readonly contSpecService: ContSpecService,
   ) {}
 
   // qr
@@ -76,13 +90,13 @@ export class DevicesService {
   }
 
   // 조회
-  async getDeviceById(id: number) {
+  async getDeviceById(id: number, showGateway: boolean = true) {
     const device = await this.deviceRepository.findOne({
       where: {
         id,
       },
       relations: {
-        gateway: true,
+        gateway: showGateway,
         sensors: true,
         controllers: true,
       },
@@ -203,6 +217,13 @@ export class DevicesService {
           areaId,
           gatewayId,
         },
+      },
+      order: {
+        id: 'ASC',
+      },
+      relations: {
+        controllers: true,
+        sensors: true,
       },
     });
   }
@@ -332,5 +353,53 @@ export class DevicesService {
     });
 
     return await Promise.all(newList);
+  }
+
+  async getDevicesByRoomId(roomId: string, user: UsersModel, qr?: QR) {
+    const [countryId, areaId, gatewayId] = splitString(roomId, 3);
+
+    const devices = await this.deviceRepository.find({
+      where: {
+        gateway: {
+          countryId,
+          areaId,
+          gatewayId,
+        },
+      },
+      relations: {
+        controllers: true,
+        sensors: true,
+      },
+    });
+
+    if (devices === null || !devices) {
+      wlogger.error(
+        `해당 디바이스 리스트를 찾을 수 없습니다. roomId: ${roomId}`,
+      );
+      throw new NotFoundException(
+        `해당 디바이스 리스트를 찾을 수 없습니다. roomId: ${roomId}`,
+      );
+    }
+
+    for (const device of devices) {
+      if (device.classify === DeviceEnum.CONTROLLER) {
+        const controllers =
+          await this.contDeviceService.getContDeviceByDeviceId(device.id);
+        for (const controller of controllers) {
+          const specification = await this.contSpecService.getContSpecById(
+            controller.specification.id,
+          );
+          controller.specification = specification;
+        }
+        device.controllers = controllers;
+      } else {
+        const sensors =
+          await this.sensorDeviceService.getSensorDeviceByDeviceId(device.id);
+        device.sensors = sensors;
+      }
+    }
+
+    console.log(devices);
+    return devices;
   }
 }

@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -40,9 +42,10 @@ export class RealTimeDataService {
     private readonly realtimeControllersRepository: Repository<ContRealTimeDataModel>,
     @InjectRepository(AccumulatedIrradianceModel)
     private readonly accumulatedIrradianceRepository: Repository<AccumulatedIrradianceModel>,
+    @Inject(forwardRef(() => DevicesService))
+    private readonly devicesService: DevicesService,
     private readonly usersService: UsersService,
     private readonly gatewayService: GatewaysService,
-    private readonly devicesService: DevicesService,
     private readonly sensorDeviceService: SensorDeviceService,
     private readonly notiService: NotificationsService,
   ) {}
@@ -204,8 +207,12 @@ export class RealTimeDataService {
       dto.cid,
     );
 
+    const [gpio1, gpio2] = dto.gpio.split(',');
+
     const data = this.realtimeControllersRepository.create({
       ...dto,
+      gpio1,
+      gpio2,
       device: device,
     });
 
@@ -281,19 +288,37 @@ export class RealTimeDataService {
         areaId,
         gatewayId,
       );
+      /**
+       * 여기서는 다시 고려해야되는게 실시간 데이터를 보낼때 필요한 정보를 가지고 보내줄 수 있어야 되는데 결국 그렇다는건 처음부터 디바이스 정보를 가져온뒤실시간데이터만 다시 받는걸 처리해야된다.
+       * 그렇다는건 처음 클라이언트를 실행할때 디바이스 호출 처리까지 완료를 하는게 맞다.라고 판단된다.
+       */
 
       const fetchDataPromises = deviceList.map((device) => {
         if (device.classify === DeviceEnum.SENSOR) {
-          return this.findOneSensorData(device.id);
+          return this.findOneSensorData(device.id).then((data) => ({
+            id: device.id,
+            sensorData: data,
+            type: 'sensor',
+          }));
         } else {
-          return this.findOneControllerData(device.id);
+          return this.findOneControllerData(device.id).then((data) => ({
+            id: device.id,
+            controllerData: data,
+            type: 'controller',
+          }));
         }
       });
 
       const dataList = await Promise.all(fetchDataPromises);
-      console.log(dataList);
+      console.log(
+        dataList.map((data) => data.type),
+        new Date(),
+      );
 
-      return dataList;
+      return {
+        deviceList: dataList,
+        status: true,
+      };
     } catch (error) {
       wlogger.error(error);
       throw new BadRequestException(error);
@@ -301,7 +326,12 @@ export class RealTimeDataService {
   }
 
   private async findOneSensorData(deviceId: number) {
-    return await this.realtimeSensorsRepository.findOne({
+    const device = await this.devicesService.getDeviceById(deviceId);
+    if (!device) {
+      wlogger.error('존재하지 않는 디바이스 아이디입니다.');
+      throw new BadRequestException('존재하지 않는 디바이스 아이디입니다.');
+    }
+    const sensorDataList = await this.realtimeSensorsRepository.findOne({
       where: {
         device: {
           id: deviceId,
@@ -314,21 +344,36 @@ export class RealTimeDataService {
         device: true,
       },
     });
+
+    sensorDataList.device = device;
+
+    return sensorDataList;
   }
 
   private async findOneControllerData(deviceId: number) {
-    return await this.realtimeControllersRepository.findOne({
-      where: {
-        device: {
-          id: deviceId,
+    const device = await this.devicesService.getDeviceById(deviceId);
+    if (!device) {
+      wlogger.error('존재하지 않는 디바이스 아이디입니다.');
+      throw new BadRequestException('존재하지 않는 디바이스 아이디입니다.');
+    }
+    const controllerDataList = await this.realtimeControllersRepository.findOne(
+      {
+        where: {
+          device: {
+            id: deviceId,
+          },
+        },
+        order: {
+          id: 'DESC',
+        },
+        relations: {
+          device: true,
         },
       },
-      order: {
-        id: 'DESC',
-      },
-      relations: {
-        device: true,
-      },
-    });
+    );
+
+    controllerDataList.device = device;
+
+    return controllerDataList;
   }
 }

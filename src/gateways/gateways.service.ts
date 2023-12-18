@@ -77,11 +77,15 @@ export class GatewaysService {
       where: {
         id,
       },
+      relations: {
+        devices: true,
+      },
     });
     if (!gateway) {
       wlogger.error(`해당하는 게이트웨이가 없습니다! id: ${id}`);
       throw new NotFoundException(`해당하는 게이트웨이가 없습니다! id: ${id}`);
     }
+    console.log(gateway);
     return gateway;
   }
 

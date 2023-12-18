@@ -50,7 +50,6 @@ export class GatewaysController {
   }
   // 조회
   @Get(':gatewayId')
-  @Roles(RolesEnum.ADMIN)
   async getGateway(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
     return await this.gatewaysService.getGatewayById(gatewayId);
   }

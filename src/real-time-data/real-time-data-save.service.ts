@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { TimeUnitEnum } from './const/time-unit.enum';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -26,6 +28,7 @@ export class RealTimeDataSaveService {
     private readonly dailyAverageRepository: Repository<DailyAverageModel>,
     @InjectRepository(MonthlyAverageModel)
     private readonly monthlyAverageRepository: Repository<MonthlyAverageModel>,
+    @Inject(forwardRef(() => DevicesService))
     private readonly devicesService: DevicesService,
   ) {}
 
