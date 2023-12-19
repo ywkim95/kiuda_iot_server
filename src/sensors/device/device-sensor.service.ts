@@ -194,6 +194,9 @@ export class SensorDeviceService {
       relations: {
         spec: true,
       },
+      order: {
+        id: 'ASC',
+      },
     });
     if (!sensorDeviceList || sensorDeviceList.length === 0) {
       wlogger.error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);

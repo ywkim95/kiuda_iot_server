@@ -746,12 +746,94 @@ export class ContDeviceService {
         userCustomValues: true,
         specification: true,
       },
+      order: {
+        id: 'asc',
+        userCustomValues: {
+          id: 'ASC',
+        },
+      },
     });
     if (!contDeviceList || contDeviceList.length === 0) {
-      wlogger.error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
-      throw new Error(`해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`);
+      wlogger.error(
+        `getContDeviceByDeviceId / 해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`,
+      );
+      throw new Error(
+        `getContDeviceByDeviceId / 해당 리스트가 존재하지않습니다. deviceId: ${deviceId}`,
+      );
     }
     return contDeviceList;
+  }
+
+  async updateContDeviceByModel(
+    id: number,
+    dto: UpdateContDeviceDto,
+    user: UsersModel,
+    qr?: QR,
+  ) {
+    console.log('specID', dto.specification);
+    console.log('deviceID', dto.device);
+    const contDeviceRepository = this.getContDeviceRepository(qr);
+
+    const contDeviceLogRepository = this.getContDeviceLogRepository(qr);
+
+    // 제어 디바이스 호출
+    const contDevice = await this.getDeviceControllerById(id);
+
+    // 현재 제어 디바이스와 연결된 디바이스 호출
+    const device = await this.devicesService.getDeviceById(dto.device);
+
+    // 제원 호출
+    const specification = await this.contSpecService.getContSpecById(
+      dto.specification,
+    );
+
+    // 기존값과 비교할 제어 디바이스 생성
+    const comparisonData: ContDeviceModel = {
+      ...contDevice,
+      ...dto,
+      device: device,
+      specification: specification,
+      userCustomValues: contDevice.userCustomValues,
+    };
+
+    // 비교문 같으면 기존값 반환
+    if (isEqual(contDevice, comparisonData) && !dto.userCustomValues) {
+      return contDevice;
+    }
+
+    // 다른경우 수정 일자 및 계정 기록
+    const newContDevice: ContDeviceModel = {
+      ...comparisonData,
+      updatedBy: user.email,
+      updatedAt: new Date(),
+    };
+
+    // 제어 디바이스 저장
+    await contDeviceRepository.save(newContDevice);
+
+    // 유저 커스텀 밸류가 있는 경우
+    if (dto.userCustomValues) {
+      // for 루프
+      await this.userCustomValueAndCustomSettingRangeUpdate(
+        dto,
+        contDevice,
+        user,
+        id,
+        qr,
+      );
+    }
+
+    // log
+    const deviceLog = this.createContDeviceLogModel(
+      contDevice,
+      user.email,
+      ActionEnum.PATCH,
+      contDeviceLogRepository,
+    );
+
+    await contDeviceLogRepository.save(deviceLog);
+
+    return await this.getDeviceControllerById(id);
   }
 
   async getSensorDeviceByMappingId(deviceId: number) {

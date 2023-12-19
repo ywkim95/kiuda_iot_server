@@ -23,6 +23,7 @@ import { splitString } from 'src/real-time-data/const/splitString.const';
 import { ContDeviceService } from 'src/controllers/device/device-controller.service';
 import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
 import { ContSpecService } from 'src/controllers/specifications/specifications-controller.service';
+import { SensorSpecService } from 'src/sensors/specifications/specifications-sensor.service';
 @Injectable()
 export class DevicesService {
   constructor(
@@ -37,6 +38,7 @@ export class DevicesService {
     @Inject(forwardRef(() => SensorDeviceService))
     private readonly sensorDeviceService: SensorDeviceService,
     private readonly contSpecService: ContSpecService,
+    private readonly sensorSpecService: SensorSpecService,
   ) {}
 
   // qr
@@ -99,6 +101,14 @@ export class DevicesService {
         gateway: showGateway,
         sensors: true,
         controllers: true,
+      },
+      order: {
+        sensors: {
+          id: 'ASC',
+        },
+        controllers: {
+          id: 'ASC',
+        },
       },
     });
     if (!device) {
@@ -370,7 +380,14 @@ export class DevicesService {
         controllers: true,
         sensors: true,
       },
+      order: {
+        id: 'ASC',
+        controllers: {
+          id: 'ASC',
+        },
+      },
     });
+    console.log(devices);
 
     if (devices === null || !devices) {
       wlogger.error(
@@ -395,6 +412,12 @@ export class DevicesService {
       } else {
         const sensors =
           await this.sensorDeviceService.getSensorDeviceByDeviceId(device.id);
+        for (const sensor of sensors) {
+          const spec = await this.sensorSpecService.getSensorSpecificationById(
+            sensor.spec.id,
+          );
+          sensor.spec = spec;
+        }
         device.sensors = sensors;
       }
     }

@@ -74,6 +74,26 @@ export class ContDeviceController {
     );
   }
 
+  // 제어기 개별값 변경
+  @Patch(':deviceControllerId/each')
+  @UseInterceptors(TransactionInterceptor)
+  async patchdeviceControllerEach(
+    @Param('deviceControllerId', ParseIntPipe) deviceControllerId: number,
+    @Body() body: UpdateContDeviceDto,
+    @User() user: UsersModel,
+    @QueryRunner() qr: QR,
+  ) {
+    console.log('body', body);
+    const contDevice = await this.contDeviceService.updateContDeviceByModel(
+      deviceControllerId,
+      body,
+      user,
+      qr,
+    );
+    console.log(contDevice);
+    return contDevice;
+  }
+
   // 삭제
   @Delete(':deviceControllerId')
   @Roles(RolesEnum.ADMIN)
@@ -91,7 +111,6 @@ export class ContDeviceController {
   }
 
   @Get('device/:deviceId')
-  @UseInterceptors(TransactionInterceptor)
   async getContDeviceByDeviceId(
     @Param('deviceId', ParseIntPipe) deviceId: number,
   ) {
@@ -101,7 +120,6 @@ export class ContDeviceController {
   }
 
   @Get('sensorList/:deviceId')
-  @UseInterceptors(TransactionInterceptor)
   async getSensorDevicesByMappingId(
     @Param('deviceId', ParseIntPipe) deviceId: number,
   ) {

@@ -268,8 +268,18 @@ export class RealTimeDataService {
     });
 
     if (!irradiance) {
-      wlogger.error('올바른 아이디를 입력해주세요.');
-      throw new BadRequestException('올바른 아이디를 입력해주세요.');
+      // wlogger.error('올바른 아이디를 입력해주세요.');
+      // throw new BadRequestException('올바른 아이디를 입력해주세요.');
+
+      const tempIrr: AccumulatedIrradianceModel = {
+        ...irradiance,
+        accumulatedIrradiance: 0,
+        dataCount: 0,
+        date: '',
+        deviceId: deviceId,
+        id: 1,
+      };
+      return tempIrr;
     }
 
     return irradiance;

@@ -1,5 +1,5 @@
 import { BaseWithUpdateModel } from '../../../common/entity/base-with-update.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { IsNumber, IsString } from 'class-validator';
 import { DevicesModel } from '../../../devices/entities/device.entity';
 import { SensorSpecModel } from '../../specifications/entities/specifications-sensor.entity';
@@ -25,6 +25,7 @@ export class SensorDeviceModel extends BaseWithUpdateModel {
 
   // 매핑된 센서번호 이거그냥 제원이랑 매핑시키면 될듯
   @ManyToOne(() => SensorSpecModel)
+  @JoinColumn()
   spec: SensorSpecModel;
 
   @Column({ comment: '보정 값' })

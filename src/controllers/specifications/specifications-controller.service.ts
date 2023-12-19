@@ -345,6 +345,9 @@ export class ContSpecService {
       relations: {
         specificationSteps: true,
       },
+      order: {
+        id: 'ASC',
+      },
     });
     if (!spec) {
       wlogger.error(

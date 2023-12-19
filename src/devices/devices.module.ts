@@ -9,12 +9,14 @@ import { DevicesLogModel } from './entities/device-log.entity';
 import { ContDeviceModule } from 'src/controllers/device/device-controller.module';
 import { SensorDeviceModule } from 'src/sensors/device/device-sensor.module';
 import { ContSpecModule } from 'src/controllers/specifications/specifications-controller.module';
+import { SensorSpecModule } from 'src/sensors/specifications/specifications-sensor.module';
 
 @Module({
   imports: [
     CommonModule,
     forwardRef(() => ContDeviceModule),
     forwardRef(() => SensorDeviceModule),
+    SensorSpecModule,
     ContSpecModule,
     GatewaysModule,
     TypeOrmModule.forFeature([DevicesModel, DevicesLogModel]),

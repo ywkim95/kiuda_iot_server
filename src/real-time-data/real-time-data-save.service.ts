@@ -75,6 +75,7 @@ export class RealTimeDataSaveService {
           sDate,
           eDate,
         );
+
       case TimeUnitEnum.DAILY:
         return await this.getSavedData(
           this.dailyAverageRepository,
@@ -100,15 +101,16 @@ export class RealTimeDataSaveService {
   ): Promise<T[]> {
     const datas = await repository
       .createQueryBuilder('model')
-      .leftJoinAndSelect('model.device', 'device')
+      .leftJoin('model.device', 'device')
       .where('device.id = :id', { id: id })
-      .andWhere('model.startDate > :startDate', { startDate: startDate })
+      .andWhere('model.startDate < :startDate', { startDate: startDate })
       .andWhere('model.endDate > :endDate', { endDate: endDate })
+      .orderBy('model.id', 'ASC')
       .getMany();
 
     if (datas.length === 0) {
       wlogger.error(
-        `해당 레포지토리에 매칭되는 데이터가 없습니다.\n id:${id}, repository: ${repository}\n 기간: ${startDate} ~ ${endDate}`,
+        ` 해당 레포지토리에 매칭되는 데이터가 없습니다.\n id:${id}, repository: ${repository}\n 기간: ${startDate} ~ ${endDate}`,
       );
       throw new NotFoundException(
         `해당 레포지토리에 매칭되는 데이터가 없습니다.\n id:${id}, repository: ${repository}\n 기간: ${startDate} ~ ${endDate}`,
