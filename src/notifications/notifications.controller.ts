@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { NotificationsPaginationDto } from './dto/paginate-notification.dto';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -21,6 +12,12 @@ export class NotificationsController {
    *
    */
 
-  @Get(':userId')
-  getNotification(@Param('userId') userId: number) {}
+  @Get(':roomId')
+  // admin or me
+  async getNotification(
+    @Param('roomId') roomId: string,
+    @Query() query: NotificationsPaginationDto,
+  ) {
+    return await this.notificationsService.paginateNotifications(query, roomId);
+  }
 }

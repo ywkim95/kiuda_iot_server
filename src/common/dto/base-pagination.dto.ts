@@ -18,12 +18,12 @@ export class BasePaginationDto {
   @IsOptional()
   where__id__more_than?: number;
 
-  @IsEnum(Object.values(SortEnum), {})
+  @IsEnum(SortEnum, {})
   @IsOptional()
   order__createdAt: SortEnum = SortEnum.ASC;
 
   // 몇 개의 데이터를 응답으로 받을지
   @IsNumber()
   @IsOptional()
-  take: number = 20;
+  take: number = 10;
 }

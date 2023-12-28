@@ -1,8 +1,16 @@
-import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { BaseModel } from '../../common/entity/base.entity';
-import { DevicesModel } from '../../devices/entities/device.entity';
 import { UsersModel } from '../../users/entity/users.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
+import { WarningEnum } from '../const/sentence.const';
+import { NotifyTypeEnum } from '../const/notify_type_enum.const';
 
 @Entity()
 export class NotificationModel extends BaseModel {
@@ -32,9 +40,13 @@ export class NotificationModel extends BaseModel {
   @IsString()
   message: string;
 
+  @Column({ comment: '구분', default: NotifyTypeEnum.INFO })
+  @IsEnum(NotifyTypeEnum)
+  notiType: NotifyTypeEnum;
+
   // 발생한 디바이스
-  @ManyToOne(() => DevicesModel)
-  device: DevicesModel;
+  @ManyToOne(() => GatewaysModel)
+  gateway: GatewaysModel;
 
   // 유저 정보
   @ManyToOne(() => UsersModel)

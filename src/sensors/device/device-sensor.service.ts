@@ -326,15 +326,27 @@ export class SensorDeviceService {
   }
 
   // 센서범위&보정 값 리스트
-  async getSensorDeviceRangeAndCorrectValueListByGatewayId(gatewayId: number) {
+  async getSensorDeviceRangeAndCorrectValueListByRoomId(
+    countryId: string,
+    areaId: string,
+    gatewayId: string,
+  ) {
     const sensorDeviceRangeAndCorrectValueList =
       await this.deviceSensorRepository.find({
         where: {
           device: {
             gateway: {
-              id: gatewayId,
+              countryId,
+              areaId,
+              gatewayId,
             },
           },
+        },
+        relations: {
+          spec: true,
+        },
+        order: {
+          id: 'ASC',
         },
       });
     // if (
@@ -401,8 +413,8 @@ export class SensorDeviceService {
           );
         }
       } catch (error) {
-        console.log(error);
-        throw new Error(error);
+        console.log('09iugrghj0903509ufghwth', error);
+        throw new BadRequestException(error);
       }
 
       return await this.updateDeviceSensorById(

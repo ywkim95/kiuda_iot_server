@@ -433,14 +433,21 @@ export class ContDeviceService {
   // -----------------------------------------------------------
 
   // 제어기 및 유저 커스텀 밸류 리스트 가져오기
-  async getContDeviceAndUserCustomValueListByGatewayId(gatewayId: number) {
+  async getContDeviceAndUserCustomValueListByRoomId(
+    countryId: string,
+    areaId: string,
+    gatewayId: string,
+  ) {
     const contDeviceAndUserCustomValueList =
       await this.deviceControllersRepository
         .createQueryBuilder('contDevice')
         .leftJoinAndSelect('contDevice.userCustomValues', 'userCustomValue')
         .leftJoin('contDevice.device', 'device')
         .leftJoin('device.gateway', 'gateway')
-        .where('gateway.id = :gatewayId', { gatewayId })
+        .where('gateway.countryId = :countryId', { countryId })
+        .andWhere('gateway.areaId = :areaId', { areaId })
+        .andWhere('gateway.gatewayId = :gatewayId', { gatewayId })
+        .orderBy('contDevice.id', 'ASC')
         .getMany();
     // console.log(contDeviceAndUserCustomValueList);
 

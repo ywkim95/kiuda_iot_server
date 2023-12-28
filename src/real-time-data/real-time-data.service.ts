@@ -161,11 +161,14 @@ export class RealTimeDataService {
                 sensorDevice.id,
               )
             ).device;
+            const gateway = await this.gatewayService.getGatewayFromDeviceId(
+              device.id,
+            );
             await this.notiService.registerNotification(
               device.name,
               message,
               user,
-              device,
+              gateway,
             );
           }
         }

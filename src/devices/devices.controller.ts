@@ -40,12 +40,8 @@ export class DevicesController {
   // ---
   @Get('roomId/:roomId')
   @UseInterceptors(TransactionInterceptor)
-  async getDeviceByRoomId(
-    @Param('roomId') roomId: string,
-    @User() user: UsersModel,
-    @QueryRunner() qr: QR,
-  ) {
-    return await this.devicesService.getDevicesByRoomId(roomId, user, qr);
+  async getDeviceByRoomId(@Param('roomId') roomId: string) {
+    return await this.devicesService.getDevicesByRoomId(roomId);
   }
 
   // 리스트 조회

@@ -63,9 +63,15 @@ export class CommonService {
   ) {
     const findOptions = this.composeFindOptions<Model, PaginationDto>(dto);
 
+    const whereOptions = {
+      ...findOptions.where,
+      ...overrideFindOptions.where,
+    };
+
     const results = await repository.find({
       ...findOptions,
       ...overrideFindOptions,
+      where: whereOptions,
     });
 
     const lastItem =

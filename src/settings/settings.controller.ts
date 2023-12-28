@@ -14,6 +14,7 @@ import { Setting } from './type/setting.type';
 import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
 import { QueryRunner as QR } from 'typeorm';
 import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
+import { DevicesModel } from 'src/devices/entities/device.entity';
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -29,21 +30,28 @@ export class SettingsController {
 
   // 세팅값 가져오기
   // adminOrMe
-  @Get(':gatewayId')
-  async getSetting(@Param('gatewayId', ParseIntPipe) gatewayId: number) {
-    return await this.settingsService.getSettingValueList(gatewayId);
+  @Get(':roomId')
+  async getSetting(@Param('roomId') roomId: string) {
+    return await this.settingsService.getSettingValueList(roomId);
   }
 
   // 세팅값 저장하기
   // adminOrMe
-  @Patch(':gatewayId')
+  @Patch(':roomId')
   @UseInterceptors(TransactionInterceptor)
   async patchSetting(
-    @Param('gatewayId', ParseIntPipe) gatewayId: number,
-    @Body() body: Setting,
+    @Param('roomId') roomId: string,
+    @Body() body: DevicesModel[],
     @User() user: UsersModel,
     @QueryRunner() qr: QR,
   ) {
-    return await this.settingsService.updateSetting(gatewayId, body, user, qr);
+    const resp = await this.settingsService.updateSetting(
+      roomId,
+      body,
+      user,
+      qr,
+    );
+    console.log(resp);
+    return resp;
   }
 }

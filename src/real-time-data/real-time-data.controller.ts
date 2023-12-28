@@ -89,10 +89,14 @@ export class RealTimeDataController {
         'stateDate와 endDate에 올바른 날짜형식을 기입해주세요. -- yyyy-MM-ddTHH:mm:ssZ --',
       );
     }
+    const decodeStartDate = decodeURIComponent(startDate);
+    const decodeEndDate = decodeURIComponent(endDate);
+    console.log('decodeStartDate', decodeStartDate);
+    console.log('decodeEndDate', decodeEndDate);
     const tableAndGraph = await this.saveService.getTableAndGraph(
       deviceId,
-      startDate,
-      endDate,
+      decodeStartDate,
+      decodeEndDate,
       timeUnit,
     );
     const irradiance = await this.realtimeService.getAccumulateData(deviceId);

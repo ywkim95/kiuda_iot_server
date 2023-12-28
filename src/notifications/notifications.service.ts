@@ -5,9 +5,10 @@ import { NotificationModel } from './entities/notification.entity';
 import { Repository } from 'typeorm';
 import { NotificationsPaginationDto } from './dto/paginate-notification.dto';
 import { UsersModel } from '../users/entity/users.entity';
-import { DevicesModel } from '../devices/entities/device.entity';
 import { FirebaseNotificationService } from '../firebase-admin/firebase-notification.service';
 import { FirebaseAdminService } from '../firebase-admin/firebase-admin.service';
+import { GatewaysService } from 'src/gateways/gateways.service';
+import { GatewaysModel } from 'src/gateways/entities/gateway.entity';
 
 @Injectable()
 export class NotificationsService {
@@ -33,6 +34,7 @@ export class NotificationsService {
     private readonly notiRepository: Repository<NotificationModel>,
     private readonly firebaseNotiService: FirebaseNotificationService,
     private readonly firebaseAdminService: FirebaseAdminService,
+    private readonly gatewayService: GatewaysService,
     private readonly commonService: CommonService,
   ) {}
 
@@ -40,7 +42,7 @@ export class NotificationsService {
     title: string,
     message: string,
     user: UsersModel,
-    device: DevicesModel,
+    gateway: GatewaysModel,
   ) {
     /**
      * 시나리오 : 현재상황은 값을 넘긴걸 확인 후 데이터가 넘어온 상태
@@ -49,7 +51,7 @@ export class NotificationsService {
      *
      */
     const noti = new NotificationModel();
-    noti.device = device;
+    noti.gateway = gateway;
     noti.user = user;
     noti.title = title ?? '';
     noti.message = message ?? ''; // 여기에 내용을 채워야한다.
@@ -87,12 +89,20 @@ export class NotificationsService {
     });
   }
 
-  async paginateNotifications(dto: NotificationsPaginationDto) {
+  async paginateNotifications(dto: NotificationsPaginationDto, roomId: string) {
+    const gateway = await this.gatewayService.getGatewayFromRoomId(roomId);
+
     const list = await this.commonService.paginate(
       dto,
       this.notiRepository,
-      {},
-      'notifications',
+      {
+        where: {
+          gateway: {
+            id: gateway.id,
+          },
+        },
+      },
+      `notifications/${roomId}`,
     );
 
     list.data
@@ -103,9 +113,12 @@ export class NotificationsService {
   }
 
   checkFlag(noti: NotificationModel) {
-    noti.checkFlag = true;
-    noti.checkDate = new Date();
-    return noti;
+    const newNoti: NotificationModel = {
+      ...noti,
+      checkFlag: true,
+      checkDate: new Date(),
+    };
+    return newNoti;
   }
 
   async saveNoti(noti: NotificationModel) {

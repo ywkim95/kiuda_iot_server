@@ -24,6 +24,8 @@ import { ContDeviceService } from 'src/controllers/device/device-controller.serv
 import { SensorDeviceService } from 'src/sensors/device/device-sensor.service';
 import { ContSpecService } from 'src/controllers/specifications/specifications-controller.service';
 import { SensorSpecService } from 'src/sensors/specifications/specifications-sensor.service';
+import { SensorDeviceModel } from 'src/sensors/device/entities/device-sensor.entity';
+import { ContDeviceModel } from 'src/controllers/device/entities/devices-controller.entity';
 @Injectable()
 export class DevicesService {
   constructor(
@@ -310,13 +312,26 @@ export class DevicesService {
   }
 
   // 센서 및 제어기 디바이스 useYn 리스트
-  async getSensorAndControllerDeviceUseYnListByGatewayId(gatewayId: number) {
+  async getSensorAndControllerDeviceUseYnListByRoomId(
+    countryId: string,
+    areaId: string,
+    gatewayId: string,
+  ) {
     const sensorAndControllerDeviceUseYnList = await this.deviceRepository.find(
       {
         where: {
           gateway: {
-            id: gatewayId,
+            countryId,
+            areaId,
+            gatewayId,
           },
+        },
+        relations: {
+          sensors: true,
+          controllers: true,
+        },
+        order: {
+          id: 'ASC',
         },
       },
     );
@@ -329,6 +344,21 @@ export class DevicesService {
       throw new NotFoundException(
         '해당 게이트웨이에 디바이스 정보가 없습니다.',
       );
+    }
+
+    // let sensors: SensorDeviceModel[];
+    // let controllers: ContDeviceModel[];
+
+    for (const device of sensorAndControllerDeviceUseYnList) {
+      if (device.classify === DeviceEnum.SENSOR) {
+        const sensors =
+          await this.sensorDeviceService.getSensorDeviceByDeviceId(device.id);
+        device.sensors = sensors;
+      } else if (device.classify === DeviceEnum.CONTROLLER) {
+        const controllers =
+          await this.contDeviceService.getContDeviceByDeviceId(device.id);
+        device.controllers = controllers;
+      }
     }
 
     return sensorAndControllerDeviceUseYnList;
@@ -365,7 +395,7 @@ export class DevicesService {
     return await Promise.all(newList);
   }
 
-  async getDevicesByRoomId(roomId: string, user: UsersModel, qr?: QR) {
+  async getDevicesByRoomId(roomId: string) {
     const [countryId, areaId, gatewayId] = splitString(roomId, 3);
 
     const devices = await this.deviceRepository.find({

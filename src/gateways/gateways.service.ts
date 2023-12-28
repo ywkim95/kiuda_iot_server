@@ -17,6 +17,7 @@ import { ActionEnum } from 'src/common/const/action-enum.const';
 import { JoinLoraDto } from 'src/real-time-data/dto/lora/join-lora.dto';
 import wlogger from 'src/log/winston-logger.const';
 import { QueryRunner as QR } from 'typeorm';
+import { splitString } from 'src/real-time-data/const/splitString.const';
 @Injectable()
 export class GatewaysService {
   constructor(
@@ -190,6 +191,18 @@ export class GatewaysService {
 
     return true;
   }
+  async getGatewayFromRoomId(roomId: string) {
+    const [countryId, areaId, gatewayId] = splitString(roomId, 3);
+    const gateway = await this.gatewaysRepository.findOne({
+      where: {
+        countryId,
+        areaId,
+        gatewayId,
+      },
+    });
+
+    return gateway;
+  }
 
   // 게이트웨이 주소(id) 변경
   async updateGatewayId(
@@ -335,6 +348,25 @@ export class GatewaysService {
       throw new NotFoundException(`해당하는 게이트웨이가 없습니다! id: ${id}`);
     }
     return gateway.devices;
+  }
+  async getGatewayFromDeviceId(deviceId: number) {
+    const gateway = await this.gatewaysRepository.findOne({
+      where: {
+        devices: {
+          id: deviceId,
+        },
+      },
+    });
+
+    if (!gateway) {
+      wlogger.error(
+        `해당하는 디바이스 아이디를 가진 게이트웨이가 없습니다! id: ${deviceId}`,
+      );
+      throw new NotFoundException(
+        `해당하는 디바이스 아이디를 가진 게이트웨이가 없습니다! id: ${deviceId}`,
+      );
+    }
+    return gateway;
   }
 
   // 게이트웨이 로그 모델 생성
